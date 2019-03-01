@@ -1,6 +1,6 @@
 {
 type token =
-    | T_eof | T_integer_constant | T_real_constant | T_name
+    | T_eof | T_integer_constant | T_real_constant | T_name | T_character | T_string
     | T_and | T_do | T_if | T_of | T_then
     | T_array | T_else | T_integer | T_or | T_true
     | T_begin | T_end | T_label | T_procedure | T_var
@@ -8,6 +8,9 @@ type token =
     | T_char | T_forward | T_new | T_real
     | T_dispose | T_function | T_nil | T_result
     | T_div | T_goto | T_not | T_return
+    | T_eq | T_gt | T_lt | T_gte | T_lte | T_neq  | T_plus | T_minus | T_times | T_frac | T_exp | T_ptr
+    | T_lparen | T_rparen | T_set | T_semicolon | T_dot | T_comma | T_lsquare | T_rsquare | T_ddot
+    | T_comment
 }
 
 (* Building blocks for regular expressions *)
@@ -18,7 +21,10 @@ let letter = ['a' - 'z' 'A'  - 'Z' ]
 let white  = [' ' '\t' '\r' '\n']
 let real_constant = digit+ ('.' digit+ (['E' 'e'] ['+' '-']? digit+)? )?
 let name = letter (letter|digit|'_')*
-
+let escape_character = '\\' ['n' 't' 'r' '0' '\\' ''' '"']
+let character = ''' (escape_character|_) '''
+let string = '"' _* '"'
+let comment = '(''*' ([^ '*']+ | '*'+ [^ '*' ')'])* '*'+ ')'
 
 (* Lexer *)
 rule lexer = parse
@@ -59,9 +65,43 @@ rule lexer = parse
   | digit+ { T_integer_constant }
   | real_constant { T_real_constant }
 
-  (* Names *)
-  | name         { T_name }
+  (* Chars and strings *)
+  | character { T_character }
+  | string    { T_string }
 
+
+
+  (* Names *)
+  | name     { T_name }
+
+
+  (* Operators and arithmetic *)
+  | '='      { T_eq }
+  | '('      { T_lparen }
+  | ')'      { T_rparen }
+  | '+'      { T_plus }
+  | '-'      { T_minus }
+  | '*'      { T_times }
+  | '/'      { T_frac }
+  | '>'      { T_gt }
+  | '<'      { T_lt }
+  | '>''='   { T_gte }
+  | '<''='   { T_lte }
+  | '['      { T_lsquare }
+  | ']'      { T_rsquare }
+  | '^'      { T_exp }
+  | '@'      { T_ptr }
+  | '<''>'   { T_neq }
+
+  (* Separators *)
+  | ':' '='  { T_set }
+  | ';'      { T_semicolon }
+  | '.'      { T_dot }
+  | ':'      { T_ddot }
+  | ','      { T_comma }
+
+  (* Whitespace and comments *)
+  | comment  { T_comment }
   | white+        { lexer lexbuf }
 
   | eof           { T_eof }
@@ -109,6 +149,31 @@ rule lexer = parse
     | T_integer_constant -> "T_integer_constant"
     | T_name -> "T_name"
     | T_real_constant -> "T_real_constant"
+    | T_character -> "T_character"
+    | T_string  -> "T_string"
+    | T_comment -> "T_comment"
+    | T_eq      -> "T_eq"
+    | T_lparen  -> "T_lparen"
+    | T_rparen  -> "T_rparen"
+    | T_plus    -> "T_plus"
+    | T_minus   -> "T_minus"
+    | T_times   -> "T_times"
+    | T_frac    -> "T_frac"
+    | T_gt      -> "T_gt"
+    | T_lt      -> "T_lte"
+    | T_gte     -> "T_gte"
+    | T_lte     -> "T_lte"
+    | T_lsquare -> "T_lsquare"
+    | T_rsquare -> "T_rsquare"
+    | T_exp     -> "T_exp"
+    | T_ptr     -> "T_ptr"
+    | T_set     -> "T_set"
+    | T_semicolon -> "T_semicolon"
+    | T_dot    -> "T_dot"
+    | T_ddot   -> "T_ddot"
+    | T_comma  -> "T_comma"
+    | T_neq    -> "T_neq"
+
 
   let main =
     let lexbuf = Lexing.from_channel stdin in
