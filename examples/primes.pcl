@@ -39,4 +39,4 @@ program primes;
           if prime(number) then counter := counter + 1
         end;
       writeInteger(number);
-    end;
+    end.
