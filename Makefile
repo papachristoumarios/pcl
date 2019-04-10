@@ -5,6 +5,8 @@ else
    EXE=
 endif
 
+CP=cp
+INSTALL_PREFIX=/usr/local
 OCAMLC_FLAGS=-g
 OCAMLC=ocamlc
 
@@ -30,3 +32,10 @@ clean:
 
 distclean: clean
 	$(RM) pcl$(EXE)
+
+install:
+	$(CP) pcl$(EXE) $(INSTALL_PREFIX)/bin/pcl$(EXE)
+	chmod +x $(INSTALL_PREFIX)/bin/pcl$(EXE)
+
+uninstall: $(INSTALL_PREFIX)/bin/pcl$(EXE)
+	$(RM) $(INSTALL_PREFIX)/bin/pcl$(EXE)
