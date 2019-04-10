@@ -60,6 +60,8 @@
 %token T_comment
 
 %start program
+
+%type <unit> program
 %%
 
 program : T_program T_name T_semicolon body T_dot { () }
@@ -88,6 +90,8 @@ formal_opt : { () } | formal formal_list { () }
 formal_list : { () } | T_semicolon formal formal_list { () }
 
 formal : var_opt T_name id_list T_semicolon type { () }
+
+var_opt : { () } | T_var { () }
 
 type : T_integer { () }
       | T_real { () }
