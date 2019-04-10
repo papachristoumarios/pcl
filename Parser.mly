@@ -144,23 +144,23 @@ stmt : { () }
       | T_name T_ddot stmt { () }
       | T_goto T_name { () }
       | T_return { () }
-      | T_new l_value { () }
-      | T_new T_lsquare expr T_rsquare l_value { () }
-      | T_dispose l_value { () }
-      | T_dispose T_lsquare T_rsquare l_value { () }
+      | T_new new_stmt { () }
+      | T_dispose dispose_stmt { () }
 
+
+new_stmt : l_value { () } | T_lsquare expr T_rsquare  l_value { () }
+
+dispose_stmt : l_value { () } | T_lsquare T_rsquare l_value { () }
 
 if_stmt: T_if expr T_then else_stmt { () }
 
 else_stmt: T_else stmt { () } | { () }
 
-
-/* L-values */
+ /* L-values and R-values */
 l_value : T_name { () }
         | T_result { () }
         | T_string { () }
         | expr T_exp { () }
-        | T_lparen l_value T_rparen { () }
         | l_value T_lsquare expr T_rsquare { () }
 
 /*  Expressions */
