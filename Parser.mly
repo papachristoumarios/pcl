@@ -70,7 +70,7 @@
 %nonassoc T_eq T_gt T_lt T_gte T_lte T_neq
 %left T_plus T_minus
 %left T_times T_frac T_div T_mod
-%left T_neg
+%left T_not
 %right T_exp
 %left T_ptr
 %%
@@ -127,11 +127,13 @@ stmt : { () }
       | T_name T_ddot stmt { () }
       | T_goto T_name { () }
       | T_return { () }
-      | T_new l_value { () }
-      | T_new T_lsquare expr T_rsquare l_value { () }
-      | T_dispose l_value { () }
-      | T_dispose T_lsquare T_rsquare l_value { () }
+      | T_new new_stmt { () }
+      | T_dispose dispose_stmt { () }
 
+      
+new_stmt : l_value { () } | T_lsquare expr T_rsquare  l_value { () }
+
+dispose_stmt : l_value { () } | T_lsquare T_rsquare l_value { () }
 
 if_stmt: T_if expr T_then else_stmt { () }
 
