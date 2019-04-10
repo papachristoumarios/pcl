@@ -16,6 +16,7 @@ OCAMLC_FLAGS=-g
 OCAMLC=ocamlc
 OCAMLDEP=ocamldep
 
+
 %.cmo: %.ml %.mli
 	$(OCAMLC) $(OCAMLC_FLAGS) -c $<
 
@@ -32,7 +33,7 @@ Lexer.ml: Lexer.mll
 	ocamllex -o $@ $<
 
 Parser.ml Parser.mli: Parser.mly
-	ocamlyacc -v Parser.mly
+	menhir -v Parser.mly
 
 .PHONY: clean distclean
 
