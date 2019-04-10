@@ -140,17 +140,12 @@ if_stmt: T_if expr T_then else_stmt { () }
 
 else_stmt: T_else stmt { () } | { () }
 
-/*  Expressions */
-
-
-
-/* L-values and R-values */
+ /* L-values and R-values */
 l_value : T_name { () }
         | T_result { () }
         | T_string { () }
         | l_value T_lsquare expr T_rsquare { () }
         | expr T_exp { () }
-        | T_lparen l_value T_rparen { () }
 
 expr :  T_integer_constant { () }
         | T_character { () }
