@@ -1,3 +1,8 @@
+
+# Created by https://www.gitignore.io/api/ocaml
+# Edit at https://www.gitignore.io/?templates=ocaml
+
+### OCaml ###
 *.annot
 *.cmo
 *.cma
@@ -7,6 +12,9 @@
 *.cmx
 *.cmxs
 *.cmxa
+
+# Ocamllex
+Lexer.ml
 
 # ocamlbuild working directory
 _build/
@@ -22,5 +30,10 @@ setup.log
 # Merlin configuring file for Vim and Emacs
 .merlin
 
-# Compiler outputs
-pcl
+# Dune generated files
+*.install
+
+# Local OPAM switch
+_opam/
+
+# End of https://www.gitignore.io/api/ocaml

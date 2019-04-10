@@ -117,7 +117,7 @@ rule lexer = parse
   | ','      { T_comma }
 
   (* Whitespace and comments *)
-  | comment  { T_comment }
+  | comment       { T_comment }
   | white+        { lexer lexbuf }
 
   | eof           { T_eof }

@@ -1,4 +1,8 @@
-# OS type: Linux/Win DJGPP
+# PCL Makefile
+# Authors:
+#		1. Marios Papachristou
+#		2. Ioannis Daras
+
 ifdef OS
    EXE=.exe
 else
