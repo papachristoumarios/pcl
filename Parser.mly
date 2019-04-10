@@ -1,3 +1,4 @@
+/*  Tokens */
 %token T_eof
 %token T_integer_constant
 %token T_real_constant
@@ -59,17 +60,27 @@
 %token T_ddot
 %token T_comment
 
+/* Start symbol */
 %start program
 
+/* Types */
 %type <unit> program
+
+/* Precendencies & Associativity */
+%nonassoc T_eq T_gt T_lt T_gte T_lte T_neq
+%left T_plus T_minus
+%left T_times T_frac T_div T_mod
+%left T_neg
+%right T_exp
+%left T_ptr
 %%
 
 program : T_program T_name T_semicolon body T_dot { () }
 
 body : local_list block { () }
 
-local_list: local { () }
-            | local_list { () }
+local_list:  { () }
+            | local local_list { () }
 
 local : T_var complex_ids complex_ids_list { () }
         | T_forward header T_semicolon { () }
@@ -111,8 +122,7 @@ stmt : { () }
       | l_value T_set expr { () }
       | block { () }
       | call { () }
-      | T_if expr T_then stmt { () }
-      | T_if expr T_then stmt T_else stmt { () }
+      | if_stmt { () }
       | T_while expr T_do stmt { () }
       | T_name T_ddot stmt { () }
       | T_goto T_name { () }
@@ -121,6 +131,11 @@ stmt : { () }
       | T_new T_lsquare expr T_rsquare l_value { () }
       | T_dispose l_value { () }
       | T_dispose T_lsquare T_rsquare l_value { () }
+
+
+if_stmt: T_if expr T_then else_stmt { () }
+
+else_stmt: T_else stmt { () } | { () }
 
 /*  Expressions */
 expr : l_value { () }
