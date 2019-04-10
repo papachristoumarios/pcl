@@ -11,6 +11,10 @@ begin
     while x > y do
     begin
       x := x + 1;
+      while x > 0 do
+      begin
+        x := x + 1;we
+      end;
 
     end;
   end

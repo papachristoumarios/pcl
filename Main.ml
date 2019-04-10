@@ -5,5 +5,5 @@ let main =
     Parser.program Lexer.lexer lexbuf;
     exit 0
   with Parser.Error ->
-    Printf.eprintf "PARSER ERROR: Syntax error at line: \n" ;
+    Printf.eprintf "PARSER ERROR: Syntax error at line: %d\n" !Lexer.num_lines;
     exit 1

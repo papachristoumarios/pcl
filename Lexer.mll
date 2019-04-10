@@ -18,6 +18,9 @@
   open Parser
 
   let num_lines = ref 1 ;;
+
+  let get_lines = !num_lines ;;
+
 }
 
 (* Building blocks for regular expressions *)
