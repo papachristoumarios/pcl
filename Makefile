@@ -23,16 +23,25 @@ OCAMLC=ocamlc
 %.cmo %.cmi: %.ml
 	$(OCAMLC) $(OCAMLC_FLAGS) -c $<
 
-pcl$(EXE): Lexer.cmo
+minibasic$(EXE): Lexer.cmo Parser.cmo Main.cmo
 	$(OCAMLC) $(OCAMLC_FLAGS) -o $@ $^
 
 Lexer.ml: Lexer.mll
 	ocamllex -o $@ $<
 
+-include .depend
+
+
+Parser.ml Parser.mli: Parser.mly
+	ocamlyacc -v Parser.mly
+
+depend: Lexer.ml Lexer.mli Parser.ml Parser.mli Main.ml
+	$(OCAMLDEP) $^ > .depend
+
 .PHONY: clean distclean
 
 clean:
-	$(RM) Lexer.ml *.cmo *.cmi *~
+	$(RM) Lexer.ml Parser.ml Parser.mli Parser.output *.cmo *.cmi *~
 
 distclean: clean
 	$(RM) pcl$(EXE)

@@ -15,18 +15,7 @@
 *)
 
 {
-type token =
-    | T_eof | T_integer_constant | T_real_constant | T_name | T_character | T_string
-    | T_and | T_do | T_if | T_of | T_then
-    | T_array | T_else | T_integer | T_or | T_true
-    | T_begin | T_end | T_label | T_procedure | T_var
-    | T_boolean | T_false | T_mod | T_program | T_while
-    | T_char | T_forward | T_new | T_real
-    | T_dispose | T_function | T_nil | T_result
-    | T_div | T_goto | T_not | T_return
-    | T_eq | T_gt | T_lt | T_gte | T_lte | T_neq  | T_plus | T_minus | T_times | T_frac | T_exp | T_ptr
-    | T_lparen | T_rparen | T_set | T_semicolon | T_dot | T_comma | T_lsquare | T_rsquare | T_ddot
-    | T_comment
+  open Parser
 }
 
 (* Building blocks for regular expressions *)
@@ -191,7 +180,7 @@ rule lexer = parse
     | T_neq    -> "T_neq"
 
 
-  let main =
+  let debug_lex =
     let lexbuf = Lexing.from_channel stdin in
     let rec loop () =
       let token = lexer lexbuf in
