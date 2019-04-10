@@ -16,6 +16,8 @@
 
 {
   open Parser
+
+  let num_lines = ref 1 ;;
 }
 
 (* Building blocks for regular expressions *)
@@ -23,7 +25,8 @@ let digit = ['0'-'9']
 let lowercase_letter = ['a' - 'z']
 let uppercase_letter = ['A' - 'Z']
 let letter = lowercase_letter | uppercase_letter
-let white  = [' ' '\t' '\r' '\n']
+let white  = [' ' '\t' '\r' ]
+let newline = '\n'
 let real_constant = digit+ ('.' digit+ (['E' 'e'] ['+' '-']? digit+)? )?
 let name = letter (letter|digit|'_')*
 let escape_character = '\\' ['n' 't' 'r' '0' '\\' ''' '"']
@@ -107,11 +110,12 @@ rule lexer = parse
   | ','      { T_comma }
 
   (* Whitespace and comments *)
-  | comment       { T_comment }
+  | comment       { lexer lexbuf }
   | white+        { lexer lexbuf }
+  | newline       { incr num_lines; lexer lexbuf }
 
   | eof           { T_eof }
 
-  |  _ as chr     { Printf.eprintf "invalid character: '%c' (ascii: %d)"
-                      chr (Char.code chr);
+  |  _ as chr     { Printf.eprintf "LEXER ERROR: Invalid character: '%c' (ascii: %d) at line %d"
+                      chr (Char.code chr) !num_lines;
                     lexer lexbuf }

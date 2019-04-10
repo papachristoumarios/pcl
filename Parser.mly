@@ -74,7 +74,6 @@
 %token T_lsquare
 %token T_rsquare
 %token T_ddot
-%token T_comment
 
 /* Start symbol */
 %start program
@@ -95,7 +94,7 @@
 
 %%
 
-program : T_program T_name T_semicolon body T_dot { () }
+program : T_program T_name T_semicolon body T_dot T_eof { () }
 
 body : local_list block { () }
 
@@ -113,16 +112,17 @@ complex_ids_list : { () } | complex_ids complex_ids_list { () }
 
 id_list: { () } | T_comma T_name id_list { () }
 
-header : T_procedure T_name T_lparen formal_opt T_rparen { () }
-         | T_function T_name T_lparen formal_opt T_rparen T_ddot ttype { () }
+header : T_procedure T_name T_lparen formal_opt? T_rparen { () }
+         | T_function T_name T_lparen formal_opt? T_rparen T_ddot ttype { () }
 
-formal_opt : { () } | formal formal_list { () }
+formal : T_var? T_name id_list T_ddot ttype { () }
 
-formal_list : { () } | T_semicolon formal formal_list { () }
+formal_opt : formal formal_list { () }
 
-formal : var_opt T_name id_list T_semicolon ttype { () }
+formal_list :
+        { () }
+      | T_semicolon formal formal_list { () }
 
-var_opt : { () } | T_var { () }
 
 ttype : T_integer { () }
       | T_real { () }

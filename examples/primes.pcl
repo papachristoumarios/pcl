@@ -1,5 +1,6 @@
 program primes;
   var x, y : integer;
+  forward procedure f(var x, y, z : integer; u : integer);
 begin
   x := 10;
   x := 20;
@@ -7,5 +8,10 @@ begin
     x := 20;
     if x then x := 20 else y := 10;
     if x then x := 20;
+    while x > y do
+    begin
+      x := x + 1;
+
+    end;
   end
 end.

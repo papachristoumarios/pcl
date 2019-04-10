@@ -1,5 +1,4 @@
 program solve;
-
   var numberOfRings : integer;
 
   procedure hanoi (var source, target,
