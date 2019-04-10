@@ -32,13 +32,14 @@ type token =
 (* Building blocks for regular expressions *)
 let digit = ['0'-'9']
 let lowercase_letter = ['a' - 'z']
-let upercase_letter = ['A' - 'Z']
-let letter = ['a' - 'z' 'A'  - 'Z' ]
+let uppercase_letter = ['A' - 'Z']
+let letter = lowercase_letter | uppercase_letter
 let white  = [' ' '\t' '\r' '\n']
 let real_constant = digit+ ('.' digit+ (['E' 'e'] ['+' '-']? digit+)? )?
 let name = letter (letter|digit|'_')*
 let escape_character = '\\' ['n' 't' 'r' '0' '\\' ''' '"']
 let character = ''' (escape_character|_) '''
+(* TODO: maybe this is allowed in string? *)
 let string = '"' [^ '"']* '"'
 let comment = '(''*' ([^ '*']+ | '*'+ [^ '*' ')'])* '*'+ ')'
 
