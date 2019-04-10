@@ -16,6 +16,13 @@
 # Ocamllex
 Lexer.ml
 
+# Parser 
+Parser.ml
+Parser.mli
+Parser.output
+
+# Make file depend
+.depend
 # ocamlbuild working directory
 _build/
 
