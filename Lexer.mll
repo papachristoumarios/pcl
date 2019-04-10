@@ -23,7 +23,7 @@ let real_constant = digit+ ('.' digit+ (['E' 'e'] ['+' '-']? digit+)? )?
 let name = letter (letter|digit|'_')*
 let escape_character = '\\' ['n' 't' 'r' '0' '\\' ''' '"']
 let character = ''' (escape_character|_) '''
-let string = '"' _* '"'
+let string = '"' [^ '"']* '"'
 let comment = '(''*' ([^ '*']+ | '*'+ [^ '*' ')'])* '*'+ ')'
 
 (* Lexer *)
