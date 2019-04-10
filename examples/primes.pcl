@@ -1,42 +1,11 @@
 program primes;
-
-  var limit, number, counter : integer;
-
-  function prime (n : integer) : boolean;
-    var i : integer;
+  var x, y : integer;
+begin
+  x := 10;
+  x := 20;
   begin
-    if n < 0 then
-      result := prime(-n)
-    else if n < 2 then
-      result := false
-    else if n = 2 then
-      result := true
-    else if n mod 2 = 0 then
-      result := false
-    else
-      begin
-        i := 3
-        while i <= n div 2 do
-        begin
-          if n mod i = 0 then
-            begin
-              result := false;
-              return
-            end;
-            i := i + 2
-          end
-        end;
-        result := true
-      end;
-
-    begin
-      limit := readInteger();
-      counter : = 0;
-      number := 0;
-      while number <= limit do
-        begin
-          number := number + 1;
-          if prime(number) then counter := counter + 1
-        end;
-      writeInteger(number);
-    end.
+    x := 20;
+    if x then x := 20 else y := 10;
+    if x then x := 20;
+  end
+end.

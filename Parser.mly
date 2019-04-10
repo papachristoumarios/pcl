@@ -90,6 +90,9 @@
 %right T_exp
 %left T_ptr
 
+%nonassoc SINGLE_IF
+%nonassoc T_else
+
 %%
 
 program : T_program T_name T_semicolon body T_dot { () }
@@ -104,7 +107,7 @@ local : T_var complex_ids complex_ids_list { () }
         | header T_semicolon body T_semicolon { () }
         | T_label T_name id_list T_semicolon { () }
 
-complex_ids : T_name id_list T_set ttype T_semicolon { () }
+complex_ids : T_name id_list T_ddot ttype T_semicolon { () }
 
 complex_ids_list : { () } | complex_ids complex_ids_list { () }
 
@@ -152,9 +155,8 @@ new_stmt : l_value { () } | T_lsquare expr T_rsquare  l_value { () }
 
 dispose_stmt : l_value { () } | T_lsquare T_rsquare l_value { () }
 
-if_stmt: T_if expr T_then else_stmt { () }
-
-else_stmt: T_else stmt { () } | { () }
+if_stmt : T_if expr T_then stmt %prec SINGLE_IF { () }
+      | T_if expr T_then stmt T_else stmt { () }
 
  /* L-values and R-values */
 l_value : T_name { () }
