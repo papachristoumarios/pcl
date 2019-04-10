@@ -63,7 +63,7 @@
 /* Start symbol */
 %start program
 
-/* Types */
+/* ttypes */
 %type <unit> program
 
 /* Precendencies & Associativity */
@@ -88,29 +88,29 @@ local : T_var complex_ids complex_ids_list { () }
         | header T_semicolon body T_semicolon { () }
         | T_label T_name id_list T_semicolon { () }
 
-complex_ids : T_name id_list T_set type T_semicolon { () }
+complex_ids : T_name id_list T_set ttype T_semicolon { () }
 
 complex_ids_list : { () } | complex_ids complex_ids_list { () }
 
 id_list: { () } | T_comma T_name id_list { () }
 
 header : T_procedure T_name T_lparen formal_opt T_rparen { () }
-         | T_function T_name T_lparen formal_opt T_rparen T_ddot type { () }
+         | T_function T_name T_lparen formal_opt T_rparen T_ddot ttype { () }
 
 formal_opt : { () } | formal formal_list { () }
 
 formal_list : { () } | T_semicolon formal formal_list { () }
 
-formal : var_opt T_name id_list T_semicolon type { () }
+formal : var_opt T_name id_list T_semicolon ttype { () }
 
 var_opt : { () } | T_var { () }
 
-type : T_integer { () }
+ttype : T_integer { () }
       | T_real { () }
       | T_boolean { () }
       | T_char { () }
-      | T_array array_length_opt T_of type { () }
-      | T_exp type { () }
+      | T_array array_length_opt T_of ttype { () }
+      | T_exp ttype { () }
 
 array_length_opt : { () } | T_lsquare T_integer_constant T_rsquare { () }
 
@@ -144,9 +144,10 @@ else_stmt: T_else stmt { () } | { () }
 l_value : T_name { () }
         | T_result { () }
         | T_string { () }
-        | l_value T_lsquare expr T_rsquare { () }
         | expr T_exp { () }
+        | l_value T_lsquare expr T_rsquare { () }
 
+/*  Expressions */
 expr :  T_integer_constant { () }
         | T_character { () }
         | l_value { () }
