@@ -68,11 +68,12 @@
 
 /* Precendencies & Associativity */
 %nonassoc T_eq T_gt T_lt T_gte T_lte T_neq
-%left T_plus T_minus
-%left T_times T_frac T_div T_mod
-%left T_not
+%left T_plus T_minus T_or
+%left T_times T_frac T_div T_mod T_and
+%left NOT POS NEG
 %right T_exp
 %left T_ptr
+
 %%
 
 program : T_program T_name T_semicolon body T_dot { () }
@@ -130,7 +131,7 @@ stmt : { () }
       | T_new new_stmt { () }
       | T_dispose dispose_stmt { () }
 
-      
+
 new_stmt : l_value { () } | T_lsquare expr T_rsquare  l_value { () }
 
 dispose_stmt : l_value { () } | T_lsquare T_rsquare l_value { () }
@@ -140,8 +141,8 @@ if_stmt: T_if expr T_then else_stmt { () }
 else_stmt: T_else stmt { () } | { () }
 
 /*  Expressions */
-expr : l_value { () }
-      | r_value { () }
+
+
 
 /* L-values and R-values */
 l_value : T_name { () }
@@ -151,17 +152,32 @@ l_value : T_name { () }
         | expr T_exp { () }
         | T_lparen l_value T_rparen { () }
 
-r_value : T_integer_constant { () }
+expr :  T_integer_constant { () }
+        | T_character { () }
+        | l_value { () }
+        | T_real_constant { () }
+        | T_lparen expr T_rparen { () }
+        | call { () }
+        | T_plus expr %prec POS { () }
+        | T_minus expr %prec NEG { () }
+        | T_not expr %prec NOT { () }
+        | expr T_plus expr { () }
+        | expr T_minus expr { () }
+        | expr T_times expr { () }
+        | expr T_frac expr { () }
+        | expr T_div expr { () }
+        | expr T_mod expr { () }
         | T_true { () }
         | T_false { () }
-        | T_real_constant { () }
-        | T_character { () }
+        | expr T_or expr { () }
+        | expr T_and expr { () }
+        | expr T_neq expr { () }
+        | expr T_eq expr { () }
+        | expr T_lt expr { () }
+        | expr T_gt expr { () }
+        | expr T_lte expr { () }
+        | expr T_gte expr { () }
         | T_nil { () }
-        | T_lparen r_value T_rparen { () }
-        | call { () }
-        | T_ptr l_value { () }
-        | unop expr { () }
-        | expr binop expr { () }
 
 /* Calls */
 call : T_name T_lparen argument_opt T_rparen { () }
@@ -172,24 +188,3 @@ argument_opt : { () }
 
 argument_list : { () }
               | expr T_comma argument_list { () }
-
-/* Unary Operators */
-unop : T_not { () }
-      | T_plus { () }
-      | T_minus { () }
-
-/* Binary Operators */
-binop : T_plus { () }
-        | T_minus { () }
-        | T_times { () }
-        | T_frac { () }
-        | T_div { () }
-        | T_mod { () }
-        | T_or { () }
-        | T_and { () }
-        | T_neq { () }
-        | T_eq { () }
-        | T_lt { () }
-        | T_gt { () }
-        | T_lte { () }
-        | T_gte { () }
