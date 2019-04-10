@@ -128,10 +128,10 @@ ttype : T_integer { () }
       | T_real { () }
       | T_boolean { () }
       | T_char { () }
-      | T_array array_length_opt T_of ttype { () }
+      | T_array array_length_opt? T_of ttype { () }
       | T_exp ttype { () }
 
-array_length_opt : { () } | T_lsquare T_integer_constant T_rsquare { () }
+array_length_opt: T_lsquare T_integer_constant T_rsquare { () }
 
 block : T_begin stmt stmt_list T_end { () }
 
@@ -194,11 +194,9 @@ expr :  T_integer_constant { () }
         | T_nil { () }
 
 /* Calls */
-call : T_name T_lparen argument_opt T_rparen { () }
+call : T_name T_lparen expr_opt? T_rparen { () }
 
-argument_opt : { () }
-              | expr { () }
-              | expr T_comma argument_list { () }
+expr_opt : expr expr_list { () }
 
-argument_list : { () }
-              | expr T_comma argument_list { () }
+expr_list : { () }
+        | T_comma expr expr_list { () }
