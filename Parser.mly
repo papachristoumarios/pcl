@@ -117,11 +117,9 @@ header : T_procedure T_name T_lparen formal_opt? T_rparen { () }
 
 formal : T_var? T_name id_list T_ddot ttype { () }
 
-formal_opt : formal formal_list { () }
+formal_opt : formal sep_formal* { () }
 
-formal_list :
-        { () }
-      | T_semicolon formal formal_list { () }
+sep_formal : T_semicolon formal { () }
 
 
 ttype : T_integer { () }
@@ -196,7 +194,6 @@ expr :  T_integer_constant { () }
 /* Calls */
 call : T_name T_lparen expr_opt? T_rparen { () }
 
-expr_opt : expr expr_list { () }
+expr_opt : expr sep_expr* { () }
 
-expr_list : { () }
-        | T_comma expr expr_list { () }
+sep_expr : T_comma expr { () }

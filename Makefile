@@ -1,7 +1,17 @@
-# PCL Makefile
-# Authors:
-#		1. Marios Papachristou
-#		2. Ioannis Daras
+  # (C) Copyright 2019- Marios Papachristou and Ioannis Daras
+  #
+  # This file is part of PCL
+  #
+  # PCL is free software: you can redistribute it and/or modify
+  # it under the terms of the MIT License.
+  #
+  # PCL is distributed in the hope that it will be useful,
+  # but WITHOUT ANY WARRANTY; without even the implied warranty of
+  # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  # LICENSE for more details.
+  #
+  # This file hosts the Makefile of PCL
+
 
 ifdef OS
    EXE=.exe

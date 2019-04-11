@@ -1,7 +1,9 @@
 program solve;
+
   var numberOfRings : integer;
 
-  procedure hanoi (var source, target : integer ;
+  procedure hanoi (var source, target : integer;
+                  auxiliary : array of char;
                   rings: integer);
 
   procedure move (var source, target : array of char);
