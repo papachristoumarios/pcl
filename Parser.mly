@@ -81,8 +81,8 @@
 /* Start symbol */
 %start program
 
-/* ttypes */
-%type <unit> program
+/* Types */
+%type <program> program
 %type <body> body
 %type <local> local
 %type <local> complex_ids
@@ -118,7 +118,7 @@
 
 %%
 
-program : T_program T_name T_semicolon body T_dot T_eof { () }
+program : T_program T_name T_semicolon body T_dot T_eof { {name = $2; program_body = $4} }
 
 body : local* block { () }
 
@@ -129,7 +129,7 @@ local : T_var complex_ids complex_ids* { () }
 
 complex_ids : T_name id_list T_ddot ttype T_semicolon { () }
 
-sep_id: T_comma T_name { () }
+sep_id: T_comma T_name { $2 }
 
 id_list: T_name sep_id* { () }
 

@@ -36,7 +36,7 @@ OCAMLDEP=ocamldep
 %.cmo %.cmi: %.ml
 	$(OCAMLC) $(OCAMLC_FLAGS) -c $<
 
-pcl$(EXE): Lexer.cmo Parser.cmo Main.cmo
+pcl$(EXE): Lexer.cmo Parser.cmo Main.cmo Ast.cmo
 	$(OCAMLC) $(OCAMLC_FLAGS) -o $@ $^
 
 Lexer.ml: Lexer.mll
@@ -49,7 +49,7 @@ Parser.ml Parser.mli: Parser.mly
 
 -include .depend
 
-depend: Lexer.ml Lexer.mli Parser.ml Parser.mli Main.ml
+depend: Lexer.ml Lexer.mli Parser.ml Parser.mli Main.ml Ast.ml
 	$(OCAMLDEP) $^ > .depend
 
 clean:

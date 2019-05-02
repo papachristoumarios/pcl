@@ -139,9 +139,3 @@ and local =
 
 (* Program *)
 type program = {name: string; program_body: body}
-
-
-let main () =
-    Printf.eprintf "D\n" ;;
-
-let _ = Printexc.print main ()
