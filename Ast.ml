@@ -24,15 +24,22 @@ type constant =
   | NullConstant
 
 (* Arithmetic Expressions *)
-type arithmetic_binary = {left: numeric_constant; op: char; right: numeric_constant}
-type arithmetic_unary = {op: char; operand: numeric_constant}
+type bool_binary_operator = OR | AND | NEQ | EQ | LT | GT | LTE | GTE
+type bool_unary_operator = NOT
+
+
+type ar_binary_operator = PLUS | MINUS | TIMES | FRAC | DIV | MOD
+type ar_unary_operator = SIGN_PLUS | SIGN_MINUS
+
+type arithmetic_binary = {left: numeric_constant; op: ar_binary_operator; right: numeric_constant}
+type arithmetic_unary = {op: ar_unary_operator; operand: numeric_constant}
 type arithmetic_expr =
   | ArithmeticUnary of arithmetic_unary
   | ArithmeticBinary of arithmetic_binary
 
 (* Logical Expressions *)
-type logical_binary = {left: logical_constant; op: char; right: logical_constant}
-type logical_unary = {op: char; operand: logical_constant}
+type logical_binary = {left: logical_constant; op: bool_binary_operator; right: logical_constant}
+type logical_unary = {op: bool_unary_operator; operand: logical_constant}
 type logical_expr =
   | LogicalBinary of logical_binary
   | LogicalUnary of logical_unary
