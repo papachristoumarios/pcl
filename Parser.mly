@@ -85,7 +85,7 @@
 %type <Ast.body> program
 %type <Ast.body> body
 %type <Ast.local> local
-%type <Ast.local> complex_ids
+%type <Ast.complex_ids> complex_ids
 %type <Ast.header> header
 %type <formal> formal
 %type <formal> sep_formal
@@ -122,7 +122,7 @@ program : T_program T_name T_semicolon body T_dot T_eof { $4 }
 
 body : local* block { {local_list = $1; body_block = $2} }
 
-local : T_var complex_ids complex_ids* { ComplexIds $2 :: $3 }
+local : T_var complex_ids complex_ids* { ComplexIds ($2 :: $3) }
         | T_forward header T_semicolon { ForwardHeader $2 }
         | header T_semicolon body T_semicolon { HeaderBody ($1, $3) }
         | T_label T_name id_list T_semicolon { IdList $3 }
@@ -166,11 +166,11 @@ stmt : { EmptyStatement }
       | call { $1 }
       | if_stmt { $1 }
       | T_while expr T_do stmt { {condition=$1 ; action=$4} }
-      | T_name T_ddot stmt {{ddot_stmt: $3}}
-      | T_goto T_name {{label = $2}}
+      | T_name T_ddot stmt { {ddot_stmt = $3} }
+      | T_goto T_name { {label = $2} }
       | T_return { Return }
-      | T_new new_stmt { $2}
-      | T_dispose dispose_stmt {$2}
+      | T_new new_stmt { $2 }
+      | T_dispose dispose_stmt {$2 }
 
 
 new_stmt : l_value {$1} | T_lsquare expr T_rsquare  l_value {{expr = $2 ; value = $4}}
@@ -183,20 +183,26 @@ if_stmt : T_if expr T_then stmt %prec SINGLE_IF { {simple_expr = $2 ; then_stmt 
 /* L-values and R-values */
 l_value : T_name { Id $1}
         | T_result { Result }
-        | T_string { Const $1}
-        | expr T_exp { {variable: $1} }
+        | T_string { Const $1 }
+        | expr T_exp { Deref $1 }
         | l_value T_lsquare expr T_rsquare { {sq_lvalue=$1 ; sq_expr = $3}}
 
 /*  Expressions */
 
-constant :  T_integer_constant { () } /* ConstNode */
-        | T_real_constant { () }
-        | T_character { () }
-        | T_true { () }
-        | T_false { () }
-        | T_nil { () }
+constant : numeric_constant { NumericConstant $1 }
+        | logical_constant { LogicalConst $1 }
+        | T_character { CharacterConstant $1 }
+        | T_nil { NullConstant }
 
-expr :    constant { () } /* ConstNode */
+numeric_constant :
+          T_integer_constant { Int $1 } /* ConstNode */
+        | T_real_constant { Real $1 }
+
+logical_constant: T_true { Bool true }
+        | T_false { Bool false }
+
+
+expr :    constant { Constant $1 } /* ConstNode */
         | l_value { Lvalue $1 }
         | T_lparen expr T_rparen { $2 } /* Expr */
         /*| call { () } /* FunctionCall */
@@ -219,7 +225,7 @@ expr :    constant { () } /* ConstNode */
         | expr T_gte expr { () } /* BooleanBinary */
 
 /* Calls */
-call : T_name T_lparen expr_opt? T_rparen { {name: $1; args: $3} }
+call : T_name T_lparen expr_opt? T_rparen { {name = $1; args = $3} }
 
 expr_opt : expr sep_expr* { $1 :: $2 }
 

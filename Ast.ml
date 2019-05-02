@@ -18,8 +18,8 @@
 type numeric_constant = Int of int | Real of float
 type logical_constant = Bool of bool
 type constant =
-  | NumericConst of numeric_constant
-  | LogicalConst of logical_constant
+  | NumericConstant of numeric_constant
+  | LogicalConstant of logical_constant
   | CharacterConstant of char
   | NullConstant
 
@@ -47,11 +47,10 @@ type rvalue =
 type lvalue =
   | Const of constant
   | Result
-  | Deref of deref
+  | Deref of expr
   | Id of string
   | SquaredLvalue of squared_lvalue
 and squared_lvalue = {sq_lvalue: lvalue; sq_expr: expr}
-and deref = {variable: expr}
 and expr =
   | Rvalue of rvalue
   | Lvalue of lvalue
