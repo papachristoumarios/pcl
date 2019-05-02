@@ -1,3 +1,6 @@
+%{
+  open Ast
+%}
 /*
   (C) Copyright 2019- Marios Papachristou and Ioannis Daras
 
@@ -98,14 +101,12 @@ program : T_program T_name T_semicolon body T_dot T_eof { () }
 
 body : local* block { () }
 
-local : T_var complex_ids complex_ids_list { () }
+local : T_var complex_ids complex_ids* { () }
         | T_forward header T_semicolon { () }
         | header T_semicolon body T_semicolon { () }
         | T_label T_name id_list T_semicolon { () }
 
 complex_ids : T_name id_list T_ddot ttype T_semicolon { () }
-
-complex_ids_list : { () } | complex_ids complex_ids_list { () }
 
 sep_id: T_comma T_name { () }
 

@@ -118,16 +118,18 @@ type ttype =
 
 and array_ttype = {length: int; arr_type: ttype}
 
+(* Formals *)
+type formal = {name : string ; list : string list ; formal_type : ttype}
+
 type header = {procedure: bool; formal_list: formal list; header_type: ttype; }
 
 type body = {local_list: local list; body_block: block}
 
+and local =
+  | ForwardHeader of header
+  | IdList of string list
+
 type program = {name: string; program_body: body}
-
-(* Formals *)
-type formal = {name : id ; list : id_list ; formal_type : ttype}
-
-type formal_list = formal list
 
 
 let main () =
