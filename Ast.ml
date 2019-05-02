@@ -124,6 +124,10 @@ type body = {local_list: local list; body_block: block}
 
 type program = {name: string; program_body: body}
 
+(* Formals *)
+type formal = {name : id ; list : id_list ; formal_type : ttype}
+
+type formal_list = formal list
 
 
 let main () =
