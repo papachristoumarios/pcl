@@ -132,22 +132,22 @@ ttype : T_integer { () }
 
 array_length_opt: T_lsquare T_integer_constant T_rsquare { () }
 
-block : T_begin stmt stmt_list T_end { () }
+block : T_begin stmt stmt_list T_end { () } /* done */
 
 stmt_list : { () } | T_semicolon stmt stmt_list { () }
 
 /*  Statements */
 stmt : { () }
-      | l_value T_set expr { () }
-      | block { () }
-      | call { () }
-      | if_stmt { () }
-      | T_while expr T_do stmt { () }
-      | T_name T_ddot stmt { () }
-      | T_goto T_name { () }
-      | T_return { () }
-      | T_new new_stmt { () }
-      | T_dispose dispose_stmt { () }
+      | l_value T_set expr { () } /* done */
+      | block { () } /* done */
+      | call { () } /* done */
+      | if_stmt { () } /* done */
+      | T_while expr T_do stmt { () } /* done */
+      | T_name T_ddot stmt { () } /* done */
+      | T_goto T_name { () } /* done */
+      | T_return { () } /* done */
+      | T_new new_stmt { () } /* done */
+      | T_dispose dispose_stmt { () } /* done */
 
 
 new_stmt : l_value { () } | T_lsquare expr T_rsquare  l_value { () }
