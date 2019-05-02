@@ -18,7 +18,6 @@ let parse_opt_list l = match l with
   | None -> []
   | Some x -> x
 
-let foo = Printf.eprintf "DAS\n"
 
 (* Constants *)
 type numeric_constant = Int of int | Real of float
@@ -29,15 +28,11 @@ type constant =
   | CharacterConstant of char
   | NullConstant
 
+(* Operators *)
 type bool_binary_operator = OR | AND | NEQ | EQ | LT | GT | LTE | GTE
 type bool_unary_operator = NOT
-
 type ar_binary_operator = PLUS | MINUS | TIMES | FRAC | DIV | MOD
 type ar_unary_operator = SIGN_PLUS | SIGN_MINUS
-
-
-
-
 
 (* L-Value *)
 type lvalue =
@@ -71,11 +66,6 @@ and arithmetic_unary = {unop_num: ar_unary_operator; operand_num: expr}
 (* Logical Expressions *)
 and logical_binary = {left_log: expr; op_log: bool_binary_operator; right_log: expr}
 and logical_unary = {unop_log: bool_unary_operator; operand_log: expr}
-
-
-
-
-
 
 (* Goto *)
 type goto = {label: string}
@@ -157,3 +147,12 @@ and local =
   | IdList of string list
   | HeaderBody of header * body
   | ComplexIds of complex_ids list
+
+let print_block blk = Printf.eprintf "<Block>\n"
+
+let print_local l = Printf.eprintf "<Local>"
+
+let print_body b =
+  Printf.eprintf "<Body>\n";
+  List.iter print_local b.local_list ;
+  print_block b.body_block ;
