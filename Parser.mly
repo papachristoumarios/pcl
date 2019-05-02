@@ -83,17 +83,27 @@
 
 /* ttypes */
 %type <unit> program
+%type <body> body
+%type <local> local
+%type <local> complex_ids
+%type <header> header
+%type <formal> formal
+%type <formal> sep_formal
+%type <formal list> formal_opt
+%type <ttype> ttype
+%type <int> array_length_opt
+
 %type <expr> sep_expr
 %type <expr list> expr_opt
 %type <function_call> call
 %type <expr> expr
-%type <lvalue> lvalue
+%type <lvalue> l_value
 %type <statement> if_stmt
-%type <statement> dispose_stmt
-%type <statement> new_stmt
+%type <dispose_statement> dispose_stmt
+%type <new_statement> new_stmt
 %type <statement> stmt
 %type <statement list> stmt_list
-%type <statement list> block
+%type <block> block
 
 /* Precendencies & Associativity */
 %nonassoc T_eq T_gt T_lt T_gte T_lte T_neq
@@ -131,7 +141,7 @@ formal : T_var? T_name id_list T_ddot ttype { () } /* Formal */
 
 formal_opt : formal sep_formal* { () } /* FormalList */
 
-sep_formal : T_semicolon formal { () } /* FormalList */
+sep_formal : T_semicolon formal { () }
 
 
 /* TypeNode */
@@ -142,7 +152,7 @@ ttype : T_integer { () }
       | T_array array_length_opt? T_of ttype { () }
       | T_exp ttype { () }
 
-array_length_opt: T_lsquare T_integer_constant T_rsquare { () } /* done */
+array_length_opt: T_lsquare T_integer_constant T_rsquare { () }
 
 block : T_begin stmt stmt_list T_end { () }
 
