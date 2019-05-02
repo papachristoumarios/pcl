@@ -87,18 +87,18 @@
 %type <Ast.local> local
 %type <Ast.complex_ids> complex_ids
 %type <Ast.header> header
-%type <formal> formal
-%type <formal> sep_formal
-%type <formal list> formal_opt
+%type <Ast.formal> formal
+%type <Ast.formal> sep_formal
+%type <Ast.formal list> formal_opt
 %type <ttype> ttype
 %type <int> array_length_opt
 
-%type <expr> sep_expr
-%type <expr list> expr_opt
+%type <Ast.expr> sep_expr
+%type <Ast.expr list> expr_opt
 %type <function_call> call
 %type <expr> expr
 %type <lvalue> l_value
-%type <statement> if_stmt
+%type <if_statement> if_stmt
 %type <dispose_statement> dispose_stmt
 %type <new_statement> new_stmt
 %type <statement> stmt
@@ -134,10 +134,15 @@ sep_id: T_comma T_name { $2 }
 id_list: T_name sep_id* { $1 :: $2 }
 
 
-header : T_procedure T_name T_lparen formal_opt? T_rparen { {procedure = true; formal_list = $4; header_type = Void} }
-         | T_function T_name T_lparen formal_opt? T_rparen T_ddot ttype { {procedure = false; formal_list =  $4; header_type = $7} }
+header : T_procedure T_name T_lparen formal_opt? T_rparen { match $4 with
+                                                              None -> {procedure = true; formal_list = []; header_type = Void}
+                                                            | Some x -> {procedure = true; formal_list = x; header_type = Void} }
+         | T_function T_name T_lparen formal_opt? T_rparen T_ddot ttype { match $4 with
+                                                                            | None -> {procedure = false; formal_list = []; header_type = $7}
+                                                                            | Some x -> {procedure = false; formal_list = x; header_type = $7}
+          }
 
-formal : T_var? T_name id_list T_ddot ttype { {name = $2; id_list = $3; header_type = $5} } /* Formal */
+formal : T_var? T_name id_list T_ddot ttype { {name = $2; id_list = $3; formal_type = $5} } /* Formal */
 
 formal_opt : formal sep_formal* { $1 :: $2 } /* FormalList */
 
@@ -149,8 +154,10 @@ ttype : T_integer { Integer }
       | T_real { Real }
       | T_boolean { Boolean }
       | T_char { Char }
-      | T_array array_length_opt? T_of ttype { {length = $2; arr_type = $4} }
-      | T_exp ttype { {pointer_type = $2} }
+      | T_array array_length_opt? T_of ttype { match $2 with
+                                                | None -> Array {length = -1; arr_type = $4}
+                                                | Some x -> Array {length = x; arr_type = $4} }
+      | T_exp ttype { Pointer {pointer_type = $2} }
 
 array_length_opt: T_lsquare T_integer_constant T_rsquare { $2 }
 
@@ -161,37 +168,37 @@ sep_stmt : T_semicolon stmt { $2 }
 
 /*  Statements */
 stmt : { EmptyStatement }
-      | l_value T_set expr { {s_lvalue=$1 ; s_expr=$3}}
+      | l_value T_set expr { SetStatement {s_lvalue=$1 ; s_expr=$3}}
       | block { Block $1 }
       | call { FunctionCall $1 }
       | if_stmt { IfStatement $1 }
-      | T_while expr T_do stmt { {condition=$1 ; action=$4} }
-      | T_name T_ddot stmt { {ddot_stmt = $3} }
-      | T_goto T_name { {label = $2} }
+      | T_while expr T_do stmt { WhileStatement {condition=$2 ; action=$4} }
+      | T_name T_ddot stmt { DDotStatement {ddot_stmt = $3} }
+      | T_goto T_name { GotoStatement {label = $2} }
       | T_return { Return }
       | T_new new_stmt { NewStatement $2 }
       | T_dispose dispose_stmt { DisposeStatement $2 }
 
 
-new_stmt : l_value {$1} | T_lsquare expr T_rsquare  l_value {{expr = $2 ; value = $4}}
+new_stmt : l_value { LValueStatement $1 } | T_lsquare expr T_rsquare  l_value { NewExprStatement {expr = $2 ; value = $4}}
 
 dispose_stmt : l_value { {square = false ; value = $1} }
       | T_lsquare T_rsquare l_value { {square = true; value = $3} }
 
-if_stmt : T_if expr T_then stmt %prec SINGLE_IF { {simple_expr = $2 ; then_stmt = $4} }
-      | T_if expr T_then stmt T_else stmt {{full_expr = $2; full_then_stmt = $4 ; else_stmt = $6} }
+if_stmt : T_if expr T_then stmt %prec SINGLE_IF { SimpleIf {simple_expr = $2 ; then_stmt = $4} }
+      | T_if expr T_then stmt T_else stmt { FullIf {full_expr = $2; full_then_stmt = $4 ; else_stmt = $6} }
 
 /* L-values and R-values */
 l_value : T_name { Id $1}
         | T_result { Result }
-        | T_string { Const $1 }
+        | T_string { String $1 }
         | expr T_exp { Deref $1 }
-        | l_value T_lsquare expr T_rsquare { {sq_lvalue=$1 ; sq_expr = $3}}
+        | l_value T_lsquare expr T_rsquare { SquaredLvalue ({sq_lvalue=$1 ; sq_expr = $3}) }
 
 /*  Expressions */
 
 constant : numeric_constant { NumericConstant $1 }
-        | logical_constant { LogicalConst $1 }
+        | logical_constant { LogicalConstant $1 }
         | T_character { CharacterConstant $1 }
         | T_nil { NullConstant }
 
@@ -207,26 +214,28 @@ expr :    constant { Constant $1 } /* ConstNode */
         | l_value { Lvalue $1 }
         | T_lparen expr T_rparen { $2 } /* Expr */
         | call { FunctionCall $1 }
-        | T_plus expr %prec POS {{op = PLUS; operand=$2}}
-        | T_minus expr %prec NEG {{op = MINUS; operand=$2}}
-        | T_not expr %prec NOT {{op = NOT; operand=$2}}
-        | expr T_plus expr {{left =  $1 ; op = PLUS; right=$3}}
-        | expr T_minus expr {{left =  $1 ; op = MINUS; right=$3}}
-        | expr T_times expr {{left =  $1 ; op = TIMES; right=$3}}
-        | expr T_frac expr {{left =  $1 ; op = FRAC; right=$3}}
-        | expr T_div expr {{left =  $1 ; op = DIV; right=$3}}
-        | expr T_mod expr {{left =  $1 ; op = MOD; right=$3}}
-        | expr T_or expr {{left =  $1 ; op = OR; right=$3}}
-        | expr T_and expr {{left =  $1 ; op = AND; right=$3}}
-        | expr T_neq expr {{left =  $1 ; op = NEQ; right=$3}}
-        | expr T_eq expr {{left =  $1 ; op = EQ; right=$3}}
-        | expr T_lt expr {{left =  $1 ; op = LT; right=$3}}
-        | expr T_gt expr {{left =  $1 ; op = GT; right=$3}}
-        | expr T_lte expr {{left =  $1 ; op = LTE; right=$3}}
-        | expr T_gte expr {{left =  $1 ; op = GTE; right=$3}}
+        | T_plus expr %prec POS {ArithmeticUnary {unop_num = SIGN_PLUS; operand_num=$2}}
+        | T_minus expr %prec NEG {ArithmeticUnary {unop_num = SIGN_MINUS; operand_num=$2}}
+        | T_not expr %prec NOT {LogicalUnary {unop_log = NOT; operand_log=$2}}
+        | expr T_plus expr {ArithmeticBinary {left_num =  $1 ; op_num = PLUS; right_num=$3}}
+        | expr T_minus expr {ArithmeticBinary  {left_num =  $1 ; op_num = MINUS; right_num=$3}}
+        | expr T_times expr {ArithmeticBinary {left_num =  $1 ; op_num = TIMES; right_num=$3}}
+        | expr T_frac expr {ArithmeticBinary  {left_num =  $1 ; op_num = FRAC; right_num=$3}}
+        | expr T_div expr {ArithmeticBinary {left_num =  $1 ; op_num = DIV; right_num=$3}}
+        | expr T_mod expr {ArithmeticBinary  {left_num =  $1 ; op_num = MOD; right_num=$3}}
+        | expr T_or expr {LogicalBinary {left_log =  $1 ; op_log = OR; right_log=$3}}
+        | expr T_and expr { LogicalBinary {left_log =  $1 ; op_log = AND; right_log=$3}}
+        | expr T_neq expr { LogicalBinary {left_log =  $1 ; op_log = NEQ; right_log=$3}}
+        | expr T_eq expr { LogicalBinary {left_log =  $1 ; op_log = EQ; right_log=$3}}
+        | expr T_lt expr { LogicalBinary {left_log =  $1 ; op_log = LT; right_log=$3}}
+        | expr T_gt expr { LogicalBinary {left_log =  $1 ; op_log = GT; right_log=$3}}
+        | expr T_lte expr { LogicalBinary {left_log =  $1 ; op_log = LTE; right_log=$3}}
+        | expr T_gte expr {LogicalBinary {left_log =  $1 ; op_log = GTE; right_log=$3}}
 
 /* Calls */
-call : T_name T_lparen expr_opt? T_rparen { {name = $1; args = $3} }
+call : T_name T_lparen expr_opt? T_rparen { match $3 with
+                                            None -> {name = $1; args = []}
+                                          | Some x -> {name = $1; args = x} }
 
 expr_opt : expr sep_expr* { $1 :: $2 }
 

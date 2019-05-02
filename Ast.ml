@@ -14,6 +14,10 @@
   This file hosts the AST Data Types for the PCL Compiler
 *)
 
+let parse_opt_list l = match l with
+  | None -> []
+  | Some x -> x
+
 (* Constants *)
 type numeric_constant = Int of int | Real of float
 type logical_constant = Bool of bool
@@ -23,31 +27,14 @@ type constant =
   | CharacterConstant of char
   | NullConstant
 
-(* Arithmetic Expressions *)
 type bool_binary_operator = OR | AND | NEQ | EQ | LT | GT | LTE | GTE
 type bool_unary_operator = NOT
-
 
 type ar_binary_operator = PLUS | MINUS | TIMES | FRAC | DIV | MOD
 type ar_unary_operator = SIGN_PLUS | SIGN_MINUS
 
-type arithmetic_binary = {left: numeric_constant; op: ar_binary_operator; right: numeric_constant}
-type arithmetic_unary = {op: ar_unary_operator; operand: numeric_constant}
-type arithmetic_expr =
-  | ArithmeticUnary of arithmetic_unary
-  | ArithmeticBinary of arithmetic_binary
 
-(* Logical Expressions *)
-type logical_binary = {left: logical_constant; op: bool_binary_operator; right: logical_constant}
-type logical_unary = {op: bool_unary_operator; operand: logical_constant}
-type logical_expr =
-  | LogicalBinary of logical_binary
-  | LogicalUnary of logical_unary
 
-(* R-Value *)
-type rvalue =
-  | ArithmeticExpr of arithmetic_expr
-  | LogicalExpr of logical_expr
 
 
 (* L-Value *)
@@ -57,13 +44,34 @@ type lvalue =
   | Deref of expr
   | Id of string
   | SquaredLvalue of squared_lvalue
+  | String of string
+
 and squared_lvalue = {sq_lvalue: lvalue; sq_expr: expr}
+
+(* R-Value *)
+
 and expr =
-  | Rvalue of rvalue
+  | ArithmeticUnary of arithmetic_unary
+  | ArithmeticBinary of arithmetic_binary
+  | LogicalBinary of logical_binary
+  | LogicalUnary of logical_unary
   | Lvalue of lvalue
   | FunctionCall of function_call
+  | Constant of constant
+
 
 and function_call = {name : string; args : expr list}
+
+(* Arithmetic Expressions *)
+and arithmetic_binary = {left_num: expr; op_num: ar_binary_operator; right_num: expr}
+and arithmetic_unary = {unop_num: ar_unary_operator; operand_num: expr}
+
+(* Logical Expressions *)
+and logical_binary = {left_log: expr; op_log: bool_binary_operator; right_log: expr}
+and logical_unary = {unop_log: bool_unary_operator; operand_log: expr}
+
+
+
 
 
 
@@ -92,7 +100,7 @@ type statement =
   | NewStatement of new_statement
   | DDotStatement of ddot_statement
   | DisposeStatement of dispose_statement
-  | Goto of goto
+  | GotoStatement of goto
   | Return
   | EmptyStatement
 
