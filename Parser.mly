@@ -82,7 +82,7 @@
 %start program
 
 /* Types */
-%type <Ast.program> program
+%type <Ast.body> program
 %type <Ast.body> body
 %type <Ast.local> local
 %type <Ast.local> complex_ids
@@ -118,7 +118,7 @@
 
 %%
 
-program : T_program T_name T_semicolon body T_dot T_eof { {program_name = "program"; program_body = $4} }
+program : T_program T_name T_semicolon body T_dot T_eof { $4 }
 
 body : local* block { {local_list = $1; body_block = $2} }
 
@@ -188,11 +188,17 @@ l_value : T_name { () } /* Id */
         | l_value T_lsquare expr T_rsquare { () } /* TODO */
 
 /*  Expressions */
-expr :  T_integer_constant { () } /* ConstNode */
-        | T_character { () } /* ConstNode */
-        | l_value { () }
-        | T_real_constant { () } /* ConstNode */
-        | T_lparen expr T_rparen { () } /* Expr */
+
+constant :  T_integer_constant { () } /* ConstNode */
+        | T_real_constant { () }
+        | T_character { () }
+        | T_true { () }
+        | T_false { () }
+        | T_nil { () }
+
+expr :    constant { () } /* ConstNode */
+        | l_value { Lvalue $1 }
+        | T_lparen expr T_rparen { $2 } /* Expr */
         /*| call { () } /* FunctionCall */
         | T_plus expr %prec POS { () } /* ArithmeticUnary */
         | T_minus expr %prec NEG { () } /* ArithmeticUnary */
@@ -203,8 +209,6 @@ expr :  T_integer_constant { () } /* ConstNode */
         | expr T_frac expr { () } /* ArithmeticBinary */
         | expr T_div expr { () } /* ArithmeticBinary */
         | expr T_mod expr { () } /* ArithmeticBinary */
-        | T_true { () } /* ConstNode */
-        | T_false { () } /* ConstNode */
         | expr T_or expr { () } /* BooleanBinary */
         | expr T_and expr { () } /* BooleanBinary */
         | expr T_neq expr { () } /* BooleanBinary */
@@ -213,7 +217,6 @@ expr :  T_integer_constant { () } /* ConstNode */
         | expr T_gt expr { () } /* BooleanBinary */
         | expr T_lte expr { () } /* BooleanBinary */
         | expr T_gte expr { () } /* BooleanBinary */
-        | T_nil { () } /* ConstNode */
 
 /* Calls */
 call : T_name T_lparen expr_opt? T_rparen { () }

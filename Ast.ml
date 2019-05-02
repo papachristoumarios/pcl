@@ -17,7 +17,10 @@
 (* Constants *)
 type numeric_constant = Int of int | Real of float
 type logical_constant = Bool of bool
-type constant = NumericConst of numeric_constant | LogicalConst of logical_constant
+type constant =
+  | NumericConst of numeric_constant
+  | LogicalConst of logical_constant
+  | CharacterConstant of char
 
 (* Arithmetic Expressions *)
 type arithmetic_binary = {left: numeric_constant; op: char; right: numeric_constant}
@@ -142,6 +145,3 @@ and local =
   | IdList of string list
   | HeaderBody of header * body
   | ComplexIds of complex_ids list
-
-(* Program *)
-type program = {program_name: string; program_body: body}
