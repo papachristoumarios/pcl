@@ -21,23 +21,25 @@ type logical_constant = Bool of bool
 type constant = NumericConst of numeric_constant | LogicalConst of logical_constant
 
 (* Arithmetic Expressions *)
-type arithmetic_binexpr = {left: numeric_constant; op: char; right: numeric_constant}
-type arithmetic_unexpr = {op: char; operand: numeric_constant}
+type arithmetic_binary = {left: numeric_constant; op: char; right: numeric_constant}
+type arithmetic_unary = {op: char; operand: numeric_constant}
 type arithmetic_expr =
-  | ArithmeticBinExpr of arithmetic_binexpr
-  | ArithmeticUnExpr of arithmetic_unexpr
+  | ArithmeticUnary of arithmetic_unary
+  | ArithmeticBinary of arithmetic_binary
 
 (* Logical Expressions *)
-type logical_binexpr = {left: logical_constant; op: char; right: logical_constant}
-type logical_unexpr = {op: char; operand: logical_constant}
+type logical_binary = {left: logical_constant; op: char; right: logical_constant}
+type logical_unary = {op: char; operand: logical_constant}
 type logical_expr =
-  | LogicalBinExpr of logical_binexpr
-  | LogicalUnExpr of logical_unexpr
+  | LogicalBinary of logical_binary
+  | LogicalUnary of logical_unary
 
 (* R-Value *)
 type rvalue =
   | ArithmeticExpr of arithmetic_expr
   | LogicalExpr of logical_expr
+
+
 
 let main () =
     Printf.eprintf "D\n" ;;
