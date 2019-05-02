@@ -196,27 +196,27 @@ constant :  T_integer_constant { () } /* ConstNode */
         | T_false { () }
         | T_nil { () }
 
-expr :    constant { () } /* ConstNode */
+expr :    constant { () }
         | l_value { Lvalue $1 }
         | T_lparen expr T_rparen { $2 } /* Expr */
-        /*| call { () } /* FunctionCall */
-        | T_plus expr %prec POS { () } /* ArithmeticUnary */
-        | T_minus expr %prec NEG { () } /* ArithmeticUnary */
-        | T_not expr %prec NOT { () } /* BooleanUnary */
-        | expr T_plus expr { () } /* ArithmeticBinary */
-        | expr T_minus expr { () } /* ArithmeticBinary */
-        | expr T_times expr { () } /* ArithmeticBinary */
-        | expr T_frac expr { () } /* ArithmeticBinary */
-        | expr T_div expr { () } /* ArithmeticBinary */
-        | expr T_mod expr { () } /* ArithmeticBinary */
-        | expr T_or expr { () } /* BooleanBinary */
-        | expr T_and expr { () } /* BooleanBinary */
-        | expr T_neq expr { () } /* BooleanBinary */
-        | expr T_eq expr { () } /* BooleanBinary */
-        | expr T_lt expr { () } /* BooleanBinary */
-        | expr T_gt expr { () } /* BooleanBinary */
-        | expr T_lte expr { () } /* BooleanBinary */
-        | expr T_gte expr { () } /* BooleanBinary */
+        | call {$1}
+        | T_plus expr %prec POS {{op = PLUS; operand=$2}}
+        | T_minus expr %prec NEG {{op = MINUS; operand=$2}}
+        | T_not expr %prec NOT {{op = NOT; operand=$2}}
+        | expr T_plus expr {{left =  $1 ; op = PLUS; right=$3}}
+        | expr T_minus expr {{left =  $1 ; op = MINUS; right=$3}}
+        | expr T_times expr {{left =  $1 ; op = TIMES; right=$3}}
+        | expr T_frac expr {{left =  $1 ; op = FRAC; right=$3}}
+        | expr T_div expr {{left =  $1 ; op = DIV; right=$3}}
+        | expr T_mod expr {{left =  $1 ; op = MOD; right=$3}}
+        | expr T_or expr {{left =  $1 ; op = OR; right=$3}}
+        | expr T_and expr {{left =  $1 ; op = AND; right=$3}}
+        | expr T_neq expr {{left =  $1 ; op = NEQ; right=$3}}
+        | expr T_eq expr {{left =  $1 ; op = EQ; right=$3}}
+        | expr T_lt expr {{left =  $1 ; op = LT; right=$3}}
+        | expr T_gt expr {{left =  $1 ; op = GT; right=$3}}
+        | expr T_lte expr {{left =  $1 ; op = LTE; right=$3}}
+        | expr T_gte expr {{left =  $1 ; op = GTE; right=$3}}
 
 /* Calls */
 call : T_name T_lparen expr_opt? T_rparen { {name: $1; args: $3} }
