@@ -121,14 +121,23 @@ and array_ttype = {length: int; arr_type: ttype}
 (* Formals *)
 type formal = {name : string ; list : string list ; formal_type : ttype}
 
+(* Header *)
 type header = {procedure: bool; formal_list: formal list; header_type: ttype; }
 
+(* Complex Ids *)
+type complex_ids = {id_list: string list; complex_ids_type: ttype}
+
+(* Body *)
 type body = {local_list: local list; body_block: block}
 
+(* Local *)
 and local =
   | ForwardHeader of header
   | IdList of string list
+  | HeaderBody of header * body
+  | ComplexIds of complex_ids list
 
+(* Program *)
 type program = {name: string; program_body: body}
 
 
