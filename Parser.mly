@@ -122,6 +122,7 @@ formal_opt : formal sep_formal* { () }
 sep_formal : T_semicolon formal { () }
 
 
+/* TypeNode */
 ttype : T_integer { () }
       | T_real { () }
       | T_boolean { () }
@@ -156,44 +157,44 @@ dispose_stmt : l_value { () } | T_lsquare T_rsquare l_value { () }
 if_stmt : T_if expr T_then stmt %prec SINGLE_IF { () }
       | T_if expr T_then stmt T_else stmt { () }
 
- /* L-values and R-values */
-l_value : T_name { () }
-        | T_result { () }
-        | T_string { () }
-        | expr T_exp { () }
-        | l_value T_lsquare expr T_rsquare { () }
+/* L-values and R-values */
+l_value : T_name { () } /* Id */
+        | T_result { () } /* Result */
+        | T_string { () } /* ConstNode */
+        | expr T_exp { () } /* Dref Expr */
+        | l_value T_lsquare expr T_rsquare { () } /* TODO */
 
 /*  Expressions */
-expr :  T_integer_constant { () }
-        | T_character { () }
+expr :  T_integer_constant { () } /* ConstNode */
+        | T_character { () } /* ConstNode */
         | l_value { () }
-        | T_real_constant { () }
-        | T_lparen expr T_rparen { () }
-        | call { () }
-        | T_plus expr %prec POS { () }
-        | T_minus expr %prec NEG { () }
-        | T_not expr %prec NOT { () }
-        | expr T_plus expr { () }
-        | expr T_minus expr { () }
-        | expr T_times expr { () }
-        | expr T_frac expr { () }
-        | expr T_div expr { () }
-        | expr T_mod expr { () }
-        | T_true { () }
-        | T_false { () }
-        | expr T_or expr { () }
-        | expr T_and expr { () }
-        | expr T_neq expr { () }
-        | expr T_eq expr { () }
-        | expr T_lt expr { () }
-        | expr T_gt expr { () }
-        | expr T_lte expr { () }
-        | expr T_gte expr { () }
-        | T_nil { () }
+        | T_real_constant { () } /* ConstNode */
+        | T_lparen expr T_rparen { () } /* Expr */
+        | call { () } /* FunctionCall */
+        | T_plus expr %prec POS { () } /* ArithmeticUnary */
+        | T_minus expr %prec NEG { () } /* ArithmeticUnary */
+        | T_not expr %prec NOT { () } /* BooleanUnary */
+        | expr T_plus expr { () } /* ArithmeticBinary */
+        | expr T_minus expr { () } /* ArithmeticBinary */
+        | expr T_times expr { () } /* ArithmeticBinary */
+        | expr T_frac expr { () } /* ArithmeticBinary */
+        | expr T_div expr { () } /* ArithmeticBinary */
+        | expr T_mod expr { () } /* ArithmeticBinary */
+        | T_true { () } /* ConstNode */
+        | T_false { () } /* ConstNode */
+        | expr T_or expr { () } /* BooleanBinary */
+        | expr T_and expr { () } /* BooleanBinary */
+        | expr T_neq expr { () } /* BooleanBinary */
+        | expr T_eq expr { () } /* BooleanBinary */
+        | expr T_lt expr { () } /* BooleanBinary */
+        | expr T_gt expr { () } /* BooleanBinary */
+        | expr T_lte expr { () } /* BooleanBinary */
+        | expr T_gte expr { () } /* BooleanBinary */
+        | T_nil { () } /* ConstNode */
 
 /* Calls */
-call : T_name T_lparen expr_opt? T_rparen { () }
+call : T_name T_lparen expr_opt? T_rparen { () } /* FunctionCall */
 
-expr_opt : expr sep_expr* { () }
+expr_opt : expr sep_expr* { () } /* Create list of expressions */
 
-sep_expr : T_comma expr { () }
+sep_expr : T_comma expr { () } /* Expr */
