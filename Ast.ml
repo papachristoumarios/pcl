@@ -14,34 +14,30 @@
   This file hosts the AST Data Types for the PCL Compiler
 *)
 
-type id = Name of string
 
-type arithmetic_binop =
-          O_plus
-        | O_minus
-        | O_times
-        | O_frac
-        | O_div
-        | O_mod
+(* Constants *)
+type numeric_constant = Int of int | Real of float
+type logical_constant = Bool of bool
+type constant = NumericConst of numeric_constant | LogicalConst of logical_constant
 
-type arithmetic_unop =
-          O_neg
-        | O_pos
+(* Arithmetic Expressions *)
+type arithmetic_binexpr = {left: numeric_constant; op: char; right: numeric_constant}
+type arithmetic_unexpr = {op: char; operand: numeric_constant}
+type arithmetic_expr =
+  | ArithmeticBinExpr of arithmetic_binexpr
+  | ArithmeticUnExpr of arithmetic_unexpr
 
-type logical_binop =
-          O_eq
-        | O_neq
-        | O_gt
-        | O_lt
-        | O_gte
-        | O_lte
-        | O_or
-        | O_and
+(* Logical Expressions *)
+type logical_binexpr = {left: logical_constant; op: char; right: logical_constant}
+type logical_unexpr = {op: char; operand: logical_constant}
+type logical_expr =
+  | LogicalBinExpr of logical_binexpr
+  | LogicalUnExpr of logical_unexpr
 
-type logical_unop = O_not
-
-type lvalue_unop = O_ptr | O_deref
-
+(* R-Value *)
+type rvalue =
+  | ArithmeticExpr of arithmetic_expr
+  | LogicalExpr of logical_expr
 
 let main () =
     Printf.eprintf "D\n" ;;
