@@ -14,48 +14,6 @@
   This file hosts the AST Data Types for the PCL Compiler
 *)
 
-type ast = expr | function_call | statement
-
-type statement = SetStatement of set_statement
-                 | Block of block
-                 | FunctionCall of function_call
-                 | IfStatement of if_statement
-                 | WhileStatement of while_statement
-                 | NewStatement of new_statement
-                 | DDotStatement of ddot_statement
-                 | DisposeStatement of dispose_statement
-                 | Goto of goto
-                 | Return
-                 | EmptyStament
-
-type if_statement = SimpleIf of simple_if | FullIf of full_if
-
-type simple if = {expr : expr ; stmt: statement}
-type full_if = {expr: expr ; stmt: statement ; else_stmt: statement}
-
-type ddot_statement = {ddot_stmt : statement}
-
-
-type set_statement = {s_lvalue : lvalue ; s_expr : expr}
-
-type dispose_statement = {square: bool, value: lvalue}
-
-type new_statement =  {expr : expr; value: lvalue} | l_value
-
-type while_statement = {condition : expr;  action : statement}
-
-type block = statement list
-
-type lvalue = const_node | result | deref | Id of string
-
-type result = {result : Id}
-
-type deref = {variable: Id}
-
-type function_call = {name : string; args : expr list}
-
-type goto = {label: Id}
-
 (* Constants *)
 type numeric_constant = Int of int | Real of float
 type logical_constant = Bool of bool
@@ -80,6 +38,76 @@ type rvalue =
   | ArithmeticExpr of arithmetic_expr
   | LogicalExpr of logical_expr
 
+(* Result  *)
+type result = {result : string}
+
+(* Dereference *)
+type deref = {variable: string}
+
+(* L-Value *)
+type lvalue =
+  | Const of constant
+  | Result of result
+  | Deref of deref
+  | Id of string
+
+(* Expression *)
+type expr =
+  | Rvalue of rvalue
+  | Lvalue of lvalue
+
+(* Function Call *)
+type function_call = {name : string; args : expr list}
+
+(* Goto *)
+type goto = {label: string}
+
+(* Set *)
+type set_statement = {s_lvalue : lvalue ; s_expr : expr}
+
+(* Dispose *)
+type dispose_statement = {square: bool;  value: lvalue}
+
+(* New *)
+type new_expr_statement = {expr : expr; value: lvalue}
+type new_statement =
+  | NewExprStatement of new_expr_statement
+  | LValueStatement of lvalue
+
+(* Statement *)
+type  statement =
+  | SetStatement of set_statement
+  | Block of block
+  | FunctionCall of function_call
+  | IfStatement of if_statement
+  | WhileStatement of while_statement
+  | NewStatement of new_statement
+  | DDotStatement of ddot_statement
+  | DisposeStatement of dispose_statement
+  | Goto of goto
+  | Return
+  | EmptyStatement
+
+(* While *)
+and while_statement = {condition : expr;  action : statement}
+
+(* If Statement *)
+and simple_if = {simple_expr : expr ; then_stmt: statement}
+and full_if = {full_expr: expr ; full_then_stmt: statement ; else_stmt: statement}
+and if_statement =
+  | SimpleIf of simple_if
+  | FullIf of full_if
+
+and ddot_statement = {ddot_stmt : statement}
+
+(* Block *)
+and block = statement list
+
+(* AST *)
+type ast =
+  | Expr of expr
+  | FunctionCall of function_call
+  | Statement of statement
 
 
 let main () =
