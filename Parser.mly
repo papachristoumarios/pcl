@@ -86,7 +86,7 @@
 %type <Ast.body> body
 %type <Ast.local> local
 %type <Ast.local> complex_ids
-%type <header> header
+%type <Ast.header> header
 %type <formal> formal
 %type <formal> sep_formal
 %type <formal list> formal_opt
@@ -118,41 +118,41 @@
 
 %%
 
-program : T_program T_name T_semicolon body T_dot T_eof { {name = $2; program_body = $4} }
+program : T_program T_name T_semicolon body T_dot T_eof { {program_name = "program"; program_body = $4} }
 
 body : local* block { {local_list = $1; body_block = $2} }
 
-local : T_var complex_ids complex_ids* { () }
-        | T_forward header T_semicolon { () }
+local : T_var complex_ids complex_ids* { ComplexIds $2 :: $3 }
+        | T_forward header T_semicolon { ForwardHeader $2 }
         | header T_semicolon body T_semicolon { HeaderBody ($1, $3) }
-        | T_label T_name id_list T_semicolon { () }
+        | T_label T_name id_list T_semicolon { IdList $3 }
 
-complex_ids : T_name id_list T_ddot ttype T_semicolon { () }
+complex_ids : T_name id_list T_ddot ttype T_semicolon { {id_list = $2; complex_ids_type = $4} }
 
 sep_id: T_comma T_name { $2 }
 
-id_list: T_name sep_id* { () }
+id_list: T_name sep_id* { $1 :: $2 }
 
 
-header : T_procedure T_name T_lparen formal_opt? T_rparen { () }
-         | T_function T_name T_lparen formal_opt? T_rparen T_ddot ttype { () }
+header : T_procedure T_name T_lparen formal_opt? T_rparen { {procedure = true; formal_list = $4; header_type = Void} }
+         | T_function T_name T_lparen formal_opt? T_rparen T_ddot ttype { {procedure = false; formal_list =  $4; header_type = $7} }
 
-formal : T_var? T_name id_list T_ddot ttype { () } /* Formal */
+formal : T_var? T_name id_list T_ddot ttype { {name = $2; id_list = $3; header_type = $5} } /* Formal */
 
-formal_opt : formal sep_formal* { () } /* FormalList */
+formal_opt : formal sep_formal* { $1 :: $2 } /* FormalList */
 
-sep_formal : T_semicolon formal { () }
+sep_formal : T_semicolon formal { $2 }
 
 
 /* TypeNode */
-ttype : T_integer { () }
-      | T_real { () }
-      | T_boolean { () }
-      | T_char { () }
-      | T_array array_length_opt? T_of ttype { () }
-      | T_exp ttype { () }
+ttype : T_integer { Integer }
+      | T_real { Real }
+      | T_boolean { Boolean }
+      | T_char { Char }
+      | T_array array_length_opt? T_of ttype { {length = $2; arr_type = $4} }
+      | T_exp ttype { {pointer_type = $2} }
 
-array_length_opt: T_lsquare T_integer_constant T_rsquare { () }
+array_length_opt: T_lsquare T_integer_constant T_rsquare { $2 }
 
 block : T_begin stmt sep_stmt* T_end { $2 :: $3 }
 

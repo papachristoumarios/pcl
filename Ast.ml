@@ -116,12 +116,16 @@ type ttype =
   | Real
   | Boolean
   | Char
+  | Void
   | Array of array_ttype
+  | Pointer of pointer
 
 and array_ttype = {length: int; arr_type: ttype}
 
+and pointer = {pointer_type: ttype}
+
 (* Formals *)
-type formal = {name : string ; list : string list ; formal_type : ttype}
+type formal = {name : string ; id_list : string list ; formal_type : ttype}
 
 (* Header *)
 type header = {procedure: bool; formal_list: formal list; header_type: ttype; }
@@ -140,4 +144,4 @@ and local =
   | ComplexIds of complex_ids list
 
 (* Program *)
-type program = {name: string; program_body: body}
+type program = {program_name: string; program_body: body}
