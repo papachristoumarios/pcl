@@ -109,6 +109,22 @@ type ast =
   | FunctionCall of function_call
   | Statement of statement
 
+type ttype =
+  | Integer
+  | Real
+  | Boolean
+  | Char
+  | Array of array_ttype
+
+and array_ttype = {length: int; arr_type: ttype}
+
+type header = {procedure: bool; formal_list: formal list; header_type: ttype; }
+
+type body = {local_list: local list; body_block: block}
+
+type program = {name: string; program_body: body}
+
+
 
 let main () =
     Printf.eprintf "D\n" ;;

@@ -96,10 +96,7 @@
 
 program : T_program T_name T_semicolon body T_dot T_eof { () }
 
-body : local_list block { () }
-
-local_list:  { () }
-            | local local_list { () }
+body : local* block { () }
 
 local : T_var complex_ids complex_ids_list { () }
         | T_forward header T_semicolon { () }
@@ -110,7 +107,10 @@ complex_ids : T_name id_list T_ddot ttype T_semicolon { () }
 
 complex_ids_list : { () } | complex_ids complex_ids_list { () }
 
-id_list: { () } | T_comma T_name id_list { () }
+sep_id: T_comma T_name { () }
+
+id_list: T_name sep_id* { () }
+
 
 header : T_procedure T_name T_lparen formal_opt? T_rparen { () }
          | T_function T_name T_lparen formal_opt? T_rparen T_ddot ttype { () }
@@ -130,7 +130,7 @@ ttype : T_integer { () }
       | T_array array_length_opt? T_of ttype { () }
       | T_exp ttype { () }
 
-array_length_opt: T_lsquare T_integer_constant T_rsquare { () }
+array_length_opt: T_lsquare T_integer_constant T_rsquare { () } /* done */
 
 block : T_begin stmt stmt_list T_end { () } /* done */
 
@@ -150,12 +150,12 @@ stmt : { () }
       | T_dispose dispose_stmt { () } /* done */
 
 
-new_stmt : l_value { () } | T_lsquare expr T_rsquare  l_value { () }
+new_stmt : l_value { () } | T_lsquare expr T_rsquare  l_value { () } /* done */
 
-dispose_stmt : l_value { () } | T_lsquare T_rsquare l_value { () }
+dispose_stmt : l_value { () } | T_lsquare T_rsquare l_value { () } /* done */
 
-if_stmt : T_if expr T_then stmt %prec SINGLE_IF { () }
-      | T_if expr T_then stmt T_else stmt { () }
+if_stmt : T_if expr T_then stmt %prec SINGLE_IF { () } /* done */
+      | T_if expr T_then stmt T_else stmt { () } /* done */
 
 /* L-values and R-values */
 l_value : T_name { () } /* Id */
