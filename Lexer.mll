@@ -74,17 +74,17 @@ rule lexer = parse
   | "return"      { T_return }
 
   (* Constants *)
-  | digit+ { T_integer_constant }
-  | real_constant { T_real_constant }
+  | digit+ { T_integer_constant (int_of_string (Lexing.lexeme lexbuf)) }
+  | real_constant { T_real_constant (float_of_string (Lexing.lexeme lexbuf)) }
 
   (* Chars and strings *)
-  | character { T_character }
-  | string    { T_string }
+  | character { T_character (Lexing.lexeme lexbuf).[0] }
+  | string    { T_string (Lexing.lexeme lexbuf) }
 
 
 
   (* Names *)
-  | name     { T_name }
+  | name     { T_name (Lexing.lexeme lexbuf) }
 
 
   (* Operators and arithmetic *)

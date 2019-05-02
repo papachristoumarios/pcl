@@ -19,11 +19,11 @@
 
 /* Tokens */
 %token T_eof
-%token T_integer_constant
-%token T_real_constant
-%token T_name
-%token T_character
-%token T_string
+%token<int> T_integer_constant
+%token<float> T_real_constant
+%token<string> T_name
+%token<char> T_character
+%token<string> T_string
 %token T_and
 %token T_do
 %token T_if
@@ -206,7 +206,7 @@ logical_constant: T_true { Bool true }
 expr :    constant { Constant $1 } /* ConstNode */
         | l_value { Lvalue $1 }
         | T_lparen expr T_rparen { $2 } /* Expr */
-        | call {$1}
+        | call { FunctionCall $1 }
         | T_plus expr %prec POS {{op = PLUS; operand=$2}}
         | T_minus expr %prec NEG {{op = MINUS; operand=$2}}
         | T_not expr %prec NOT {{op = NOT; operand=$2}}
