@@ -185,13 +185,5 @@ rule lexer = parse
   | T_comma  -> "T_comma"
   | T_neq    -> "T_neq"
 
-  (* let lexer_run =
-    let lexbuf = Lexing.from_channel stdin in
-    let rec loop () =
-      let token = lexer lexbuf in
-      Printf.printf "token=%s, lexeme=\"%s\"\n"
-        (string_of_token token) (Lexing.lexeme lexbuf);
-      if token <> T_eof then loop () in
-    loop () *)
 
 }

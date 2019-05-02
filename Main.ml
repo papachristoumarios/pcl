@@ -14,7 +14,7 @@
   This file hosts the driver program for the PCL compiler.
 *)
 
-let print_ast _ = Printf.eprintf "AST"
+let print_ast _ = Printf.eprintf "Program"
 
 let usage () = Printf.eprintf "usage: pcl [-l|-p|-h|-v]* <stream.pcl
     -l      Run Lexer
@@ -32,7 +32,7 @@ Source Code: https://github.com/papachristoumarios/pcl\n"
 let parse () =
   let lexbuf = Lexing.from_channel stdin in
   try
-    let body = Parser.program Lexer.lexer lexbuf in print_ast body;
+    let program = Parser.program Lexer.lexer lexbuf in print_ast program;
     exit 0
   with Parser.Error ->
     Printf.eprintf "PARSER ERROR: Syntax error at line: %d\n" !Lexer.num_lines;

@@ -122,12 +122,12 @@ program : T_program T_name T_semicolon body T_dot T_eof { $4 }
 
 body : local* block { {local_list = $1; body_block = $2} }
 
-local : T_var complex_ids complex_ids* { ComplexIds ($2 :: $3) }
+local : T_var complex_ids complex_ids*  { ComplexIds ($2 :: $3) }
         | T_forward header T_semicolon { ForwardHeader $2 }
         | header T_semicolon body T_semicolon { HeaderBody ($1, $3) }
         | T_label T_name id_list T_semicolon { IdList $3 }
 
-complex_ids : T_name id_list T_ddot ttype T_semicolon { {id_list = $2; complex_ids_type = $4} }
+complex_ids : id_list T_ddot ttype T_semicolon { {id_list = $1; complex_ids_type = $3} }
 
 sep_id: T_comma T_name { $2 }
 
@@ -142,7 +142,7 @@ header : T_procedure T_name T_lparen formal_opt? T_rparen { match $4 with
                                                                             | Some x -> {procedure = false; formal_list = x; header_type = $7}
           }
 
-formal : T_var? T_name id_list T_ddot ttype { {name = $2; id_list = $3; formal_type = $5} } /* Formal */
+formal : T_var? id_list T_ddot ttype { {id_list = $2; formal_type = $4} } /* Formal */
 
 formal_opt : formal sep_formal* { $1 :: $2 } /* FormalList */
 

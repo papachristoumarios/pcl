@@ -18,6 +18,8 @@ let parse_opt_list l = match l with
   | None -> []
   | Some x -> x
 
+let foo = Printf.eprintf "DAS\n"
+
 (* Constants *)
 type numeric_constant = Int of int | Real of float
 type logical_constant = Bool of bool
@@ -138,7 +140,7 @@ and array_ttype = {length: int; arr_type: ttype}
 and pointer = {pointer_type: ttype}
 
 (* Formals *)
-type formal = {name : string ; id_list : string list ; formal_type : ttype}
+type formal = {id_list : string list ; formal_type : ttype}
 
 (* Header *)
 type header = {procedure: bool; formal_list: formal list; header_type: ttype; }

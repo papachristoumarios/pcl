@@ -1,6 +1,9 @@
 program solve;
+var x : integer;
+function foo(var x: integer) : integer;
+begin
 
-var source : integer
+end;
 
 begin
   writeString("Please give me the number of rings: ");
