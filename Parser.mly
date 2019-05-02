@@ -82,10 +82,10 @@
 %start program
 
 /* Types */
-%type <program> program
-%type <body> body
-%type <local> local
-%type <local> complex_ids
+%type <Ast.program> program
+%type <Ast.body> body
+%type <Ast.local> local
+%type <Ast.local> complex_ids
 %type <header> header
 %type <formal> formal
 %type <formal> sep_formal
@@ -102,8 +102,8 @@
 %type <dispose_statement> dispose_stmt
 %type <new_statement> new_stmt
 %type <statement> stmt
-%type <statement list> stmt_list
-%type <block> block
+%type <statement> sep_stmt
+%type <Ast.block> block
 
 /* Precendencies & Associativity */
 %nonassoc T_eq T_gt T_lt T_gte T_lte T_neq
@@ -120,11 +120,11 @@
 
 program : T_program T_name T_semicolon body T_dot T_eof { {name = $2; program_body = $4} }
 
-body : local* block { () }
+body : local* block { {local_list = $1; body_block = $2} }
 
 local : T_var complex_ids complex_ids* { () }
         | T_forward header T_semicolon { () }
-        | header T_semicolon body T_semicolon { () }
+        | header T_semicolon body T_semicolon { HeaderBody ($1, $3) }
         | T_label T_name id_list T_semicolon { () }
 
 complex_ids : T_name id_list T_ddot ttype T_semicolon { () }
@@ -154,14 +154,15 @@ ttype : T_integer { () }
 
 array_length_opt: T_lsquare T_integer_constant T_rsquare { () }
 
-block : T_begin stmt stmt_list T_end { () }
+block : T_begin stmt sep_stmt* T_end { $2 :: $3 }
 
-stmt_list : { () } | T_semicolon stmt stmt_list { () }
+sep_stmt : T_semicolon stmt { $2 }
+
 
 /*  Statements */
 stmt : { () }
       | l_value T_set expr { () } /* done */
-      | block { () } /* done */
+      | block { Block $1 } /* done */
       | call { () } /* done */
       | if_stmt { () } /* done */
       | T_while expr T_do stmt { () } /* done */
@@ -192,7 +193,7 @@ expr :  T_integer_constant { () } /* ConstNode */
         | l_value { () }
         | T_real_constant { () } /* ConstNode */
         | T_lparen expr T_rparen { () } /* Expr */
-        | call { () } /* FunctionCall */
+        /*| call { () } /* FunctionCall */
         | T_plus expr %prec POS { () } /* ArithmeticUnary */
         | T_minus expr %prec NEG { () } /* ArithmeticUnary */
         | T_not expr %prec NOT { () } /* BooleanUnary */
