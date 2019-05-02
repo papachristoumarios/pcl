@@ -17,7 +17,9 @@
 (* Constants *)
 type numeric_constant = Int of int | Real of float
 type logical_constant = Bool of bool
-type constant = NumericConst of numeric_constant | LogicalConst of logical_constant
+type constant = NumericConst of numeric_constant
+                | LogicalConst of logical_constant
+                | NullConstant
 
 (* Arithmetic Expressions *)
 type arithmetic_binary = {left: numeric_constant; op: char; right: numeric_constant}
