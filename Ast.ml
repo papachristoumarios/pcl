@@ -40,22 +40,17 @@ type rvalue =
   | ArithmeticExpr of arithmetic_expr
   | LogicalExpr of logical_expr
 
-(* Result  *)
-type result = {result : string}
-
-(* Dereference *)
-type deref = {variable: string}
 
 (* L-Value *)
 type lvalue =
   | Const of constant
-  | Result of result
+  | Result
   | Deref of deref
   | Id of string
-
-
-(* Expression *)
-type expr =
+  | SquaredLvalue of squared_lvalue
+and squared_lvalue = {sq_lvalue: lvalue; sq_expr: expr}
+and deref = {variable: expr}
+and expr =
   | Rvalue of rvalue
   | Lvalue of lvalue
   | FunctionCall of function_call
@@ -80,7 +75,7 @@ type new_statement =
   | LValueStatement of lvalue
 
 (* Statement *)
-type  statement =
+type statement =
   | SetStatement of set_statement
   | Block of block
   | FunctionCall of function_call
