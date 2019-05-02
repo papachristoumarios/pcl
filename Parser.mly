@@ -80,6 +80,17 @@
 
 /* ttypes */
 %type <unit> program
+%type <expr> sep_expr
+%type <expr list> expr_opt
+%type <function_call> call
+%type <expr> expr
+%type <lvalue> lvalue
+%type <statement> if_stmt
+%type <statement> dispose_stmt
+%type <statement> new_stmt
+%type <statement> stmt
+%type <statement list> stmt_list
+%type <statement list> block
 
 /* Precendencies & Associativity */
 %nonassoc T_eq T_gt T_lt T_gte T_lte T_neq
@@ -115,11 +126,11 @@ id_list: { () } | T_comma T_name id_list { () }
 header : T_procedure T_name T_lparen formal_opt? T_rparen { () }
          | T_function T_name T_lparen formal_opt? T_rparen T_ddot ttype { () }
 
-formal : T_var? T_name id_list T_ddot ttype { () }
+formal : T_var? T_name id_list T_ddot ttype { () } /* Formal */
 
-formal_opt : formal sep_formal* { () }
+formal_opt : formal sep_formal* { () } /* FormalList */
 
-sep_formal : T_semicolon formal { () }
+sep_formal : T_semicolon formal { () } /* FormalList */
 
 
 /* TypeNode */
@@ -132,7 +143,7 @@ ttype : T_integer { () }
 
 array_length_opt: T_lsquare T_integer_constant T_rsquare { () }
 
-block : T_begin stmt stmt_list T_end { () } /* done */
+block : T_begin stmt stmt_list T_end { () }
 
 stmt_list : { () } | T_semicolon stmt stmt_list { () }
 
@@ -193,8 +204,8 @@ expr :  T_integer_constant { () } /* ConstNode */
         | T_nil { () } /* ConstNode */
 
 /* Calls */
-call : T_name T_lparen expr_opt? T_rparen { () } /* FunctionCall */
+call : T_name T_lparen expr_opt? T_rparen { () }
 
-expr_opt : expr sep_expr* { () } /* Create list of expressions */
+expr_opt : expr sep_expr* { () }
 
-sep_expr : T_comma expr { () } /* Expr */
+sep_expr : T_comma expr { () }
