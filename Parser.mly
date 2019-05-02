@@ -163,19 +163,20 @@ sep_stmt : T_semicolon stmt { $2 }
 stmt : { EmptyStatement }
       | l_value T_set expr { {s_lvalue=$1 ; s_expr=$3}}
       | block { Block $1 }
-      | call { $1 }
-      | if_stmt { $1 }
+      | call { FunctionCall $1 }
+      | if_stmt { IfStatement $1 }
       | T_while expr T_do stmt { {condition=$1 ; action=$4} }
       | T_name T_ddot stmt { {ddot_stmt = $3} }
       | T_goto T_name { {label = $2} }
       | T_return { Return }
-      | T_new new_stmt { $2 }
-      | T_dispose dispose_stmt {$2 }
+      | T_new new_stmt { NewStatement $2 }
+      | T_dispose dispose_stmt { DisposeStatement $2 }
 
 
 new_stmt : l_value {$1} | T_lsquare expr T_rsquare  l_value {{expr = $2 ; value = $4}}
 
-dispose_stmt : l_value {{square = false ; value = $1}} | T_lsquare T_rsquare l_value { {square = true; value = $3}}
+dispose_stmt : l_value { {square = false ; value = $1} }
+      | T_lsquare T_rsquare l_value { {square = true; value = $3} }
 
 if_stmt : T_if expr T_then stmt %prec SINGLE_IF { {simple_expr = $2 ; then_stmt = $4} }
       | T_if expr T_then stmt T_else stmt {{full_expr = $2; full_then_stmt = $4 ; else_stmt = $6} }
