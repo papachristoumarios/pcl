@@ -109,6 +109,11 @@ type ast =
   | FunctionCall of function_call
   | Statement of statement
 
+(* Formals *)
+type formal = {name : id ; list : id_list ; formal_type : ttype}
+
+type formal_list = formal list
+
 
 let main () =
     Printf.eprintf "D\n" ;;
