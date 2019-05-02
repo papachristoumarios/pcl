@@ -160,37 +160,37 @@ sep_stmt : T_semicolon stmt { $2 }
 
 
 /*  Statements */
-stmt : { () }
-      | l_value T_set expr { () } /* done */
-      | block { Block $1 } /* done */
-      | call { () } /* done */
-      | if_stmt { () } /* done */
-      | T_while expr T_do stmt { () } /* done */
-      | T_name T_ddot stmt { () } /* done */
-      | T_goto T_name { () } /* done */
-      | T_return { () } /* done */
-      | T_new new_stmt { () } /* done */
-      | T_dispose dispose_stmt { () } /* done */
+stmt : { EmptyStatement }
+      | l_value T_set expr { {s_lvalue=$1 ; s_expr=$3}}
+      | block { Block $1 }
+      | call { $1 }
+      | if_stmt { $1 }
+      | T_while expr T_do stmt { {condition=$1 ; action=$4} }
+      | T_name T_ddot stmt {{ddot_stmt: $3}}
+      | T_goto T_name {{label = $2}}
+      | T_return { Return }
+      | T_new new_stmt { $2}
+      | T_dispose dispose_stmt {$2}
 
 
-new_stmt : l_value { () } | T_lsquare expr T_rsquare  l_value { () } /* done */
+new_stmt : l_value {$1} | T_lsquare expr T_rsquare  l_value {{expr = $2 ; value = $4}}
 
-dispose_stmt : l_value { () } | T_lsquare T_rsquare l_value { () } /* done */
+dispose_stmt : l_value {{square = false ; value = $1}} | T_lsquare T_rsquare l_value { {square = true; value = $3}}
 
-if_stmt : T_if expr T_then stmt %prec SINGLE_IF { () } /* done */
-      | T_if expr T_then stmt T_else stmt { () } /* done */
+if_stmt : T_if expr T_then stmt %prec SINGLE_IF { {simple_expr = $2 ; then_stmt = $4} }
+      | T_if expr T_then stmt T_else stmt {{full_expr = $2; full_then_stmt = $4 ; else_stmt = $6} }
 
 /* L-values and R-values */
-l_value : T_name { () } /* Id */
-        | T_result { () } /* Result */
-        | T_string { () } /* ConstNode */
-        | expr T_exp { () } /* Dref Expr */
-        | l_value T_lsquare expr T_rsquare { () } /* TODO */
+l_value : T_name { Id $1}
+        | T_result { Result }
+        | T_string { Const $1}
+        | expr T_exp { {variable: $1} }
+        | l_value T_lsquare expr T_rsquare { {sq_lvalue=$1 ; sq_expr = $3}}
 
 /*  Expressions */
 expr :  T_integer_constant { () } /* ConstNode */
-        | T_character { () } /* ConstNode */
-        | l_value { () }
+        | T_character {} /* ConstNode */
+        | l_value { $1 }
         | T_real_constant { () } /* ConstNode */
         | T_lparen expr T_rparen { () } /* Expr */
         /*| call { () } /* FunctionCall */
@@ -213,11 +213,11 @@ expr :  T_integer_constant { () } /* ConstNode */
         | expr T_gt expr { () } /* BooleanBinary */
         | expr T_lte expr { () } /* BooleanBinary */
         | expr T_gte expr { () } /* BooleanBinary */
-        | T_nil { () } /* ConstNode */
+        | T_nil { NullConstant }
 
 /* Calls */
-call : T_name T_lparen expr_opt? T_rparen { () }
+call : T_name T_lparen expr_opt? T_rparen { {name: $1; args: $3} }
 
-expr_opt : expr sep_expr* { () }
+expr_opt : expr sep_expr* { $1 :: $2 }
 
-sep_expr : T_comma expr { () }
+sep_expr : T_comma expr { $2 }
