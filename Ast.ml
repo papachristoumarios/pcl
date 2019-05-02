@@ -51,13 +51,16 @@ type lvalue =
   | Deref of deref
   | Id of string
 
+
 (* Expression *)
 type expr =
   | Rvalue of rvalue
   | Lvalue of lvalue
+  | FunctionCall of function_call
 
-(* Function Call *)
-type function_call = {name : string; args : expr list}
+and function_call = {name : string; args : expr list}
+
+
 
 (* Goto *)
 type goto = {label: string}
@@ -106,7 +109,6 @@ and block = statement list
 (* AST *)
 type ast =
   | Expr of expr
-  | FunctionCall of function_call
   | Statement of statement
 
 type ttype =
