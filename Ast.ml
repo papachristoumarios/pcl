@@ -150,7 +150,11 @@ and local =
 
 let print_block blk = Printf.eprintf "<Block>\n"
 
-let print_local l = Printf.eprintf "<Local>"
+let print_local l = match l with
+  | IdList x -> Printf.eprintf "<Local, Labels: "; List.iter (fun s -> Printf.eprintf "%s " s) x; Printf.eprintf ">\n";
+  | ForwardHeader x -> Printf.eprintf "<Local, ForwardHeader>\n";
+  | ComplexIds x -> Printf.eprintf "<Local, Ids: >\n" 
+  | _ -> Printf.eprintf "DSa"
 
 let print_body b =
   Printf.eprintf "<Body>\n";

@@ -125,7 +125,7 @@ body : local* block { {local_list = $1; body_block = $2} }
 local : T_var complex_ids complex_ids*  { ComplexIds ($2 :: $3) }
         | T_forward header T_semicolon { ForwardHeader $2 }
         | header T_semicolon body T_semicolon { HeaderBody ($1, $3) }
-        | T_label T_name id_list T_semicolon { IdList $3 }
+        | T_label id_list T_semicolon { IdList $2 }
 
 complex_ids : id_list T_ddot ttype T_semicolon { {id_list = $1; complex_ids_type = $3} }
 
