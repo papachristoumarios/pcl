@@ -38,3 +38,42 @@ For a user specific installation you can use
 ```bash
 make install INSTALL_PREFIX=/home/user/.local
 ```
+
+## :hammer: Usage
+
+After you have set up PCL you can use the `pcl` executable of the PCL compiler.
+You can display the usage of `pcl` via
+```bash
+./pcl -h
+```
+
+The `pcl` executable allows the use of its constituent parts independently. Such parts include
+
+1. The lexer
+2. The parser (printing the AST)
+3. The semantic analyzer
+4. The codegen module
+
+## :tv: Technological Stack
+
+This implementation of PCL is developed using the OCaml language and the following meta-programs
+
+1. ocamllex for lexical analysis
+2. menhir for parsing
+3. LLVM backend for OCaml
+
+## Contributing to the project 
+
+If you want to contribute to the project, please submit a pull request. 
+
+## Documentation
+
+The PCL documentation is located at `docs/` and the [wiki](https://github.com/papachristoumarios/pcl/wiki)
+
+## References 
+
+If you want to dive deeper into our compiler we advise you study the following references
+
+1. Ullman, Jeffrey D., and Alfred V. Aho. "Principles of compiler design." Reading: Addison Wesley (1977).
+2. Skordalakis, Manolis, and Papaspyrou,  Nikolaos. "Compilers". Symmetria Publications (2003 - in Greek) 
+3. PCL Specification under `docs/specification.pdf` (in Greek) 
