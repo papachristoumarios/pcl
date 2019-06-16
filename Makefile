@@ -62,3 +62,4 @@ install:
 
 uninstall: $(INSTALL_PREFIX)/bin/pcl$(EXE)
 	$(RM) $(INSTALL_PREFIX)/bin/pcl$(EXE)
+
