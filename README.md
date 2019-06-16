@@ -1,5 +1,7 @@
 # PCL
 
+[![Build Status](https://travis-ci.com/papachristoumarios/pcl.svg?token=DxqFuX4UzFjiGRipqjph&branch=master)](https://travis-ci.com/papachristoumarios/pcl)
+
 Compiler for the PCL Language written in [OCaml](http://www.ocaml.org/).
 
 This is part of the semester assignment for [_Compilers_](https://courses.softlab.ntua.gr/compilers/2019a/) course taught in ECE NTUA (Spring 2018-2019).
