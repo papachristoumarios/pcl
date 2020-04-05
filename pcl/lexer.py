@@ -136,7 +136,6 @@ class PCLLexer(Lexer):
     COMMA = regex(',')
 
     # "Special" tokens:
-    # NAME = r"(" + r"[a-z]" + r'|' + r"[A-Z]" + r")" + r"(" + r"[a-z]" + r'|' + r"[A-Z]" + r"|[0-9]" + r"|" + r"_)*"
     INT_CONS = r'[0-9]+'
     REAL_CONS = r"[0-9]+(\.[0-9]+(['E', 'e']['\+','\-']?[0-9]+)?)?"
     NAME = r"(?<!\d\W\_)[^\d\W\_]\w*"
@@ -144,7 +143,7 @@ class PCLLexer(Lexer):
     STRING = r"\"[^\"]*\""
 
     COMMENT = r'(?s)\(\*.*?\*\)'
-    ignore = r'[\t, \r, \s]+'
+    ignore = r'[\s, \t, \r]+'
     ignore_newline = '\n+'
 
     # "Special" functions:
@@ -162,11 +161,21 @@ class PCLLexer(Lexer):
 if __name__ == '__main__':
     lexer = PCLLexer()
     s = '''
-        program hello;
-        kd0sad
-        0011
+        program collatz;
+
+        label x, y;
+        forward procedure hello();
+        var x : integer;
+
         begin
-        writeString("hello")
+          x := 6;
+          while x > 1 do
+          begin
+            writeInteger(x);
+            if x mod 2 = 0 then x := x div 2
+            else x := 3 * x + 1;
+          end;
+
         end.
         '''
     token_names = [x.value for x in lexer.tokenize(s)]

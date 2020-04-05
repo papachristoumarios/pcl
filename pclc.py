@@ -3,7 +3,7 @@ import sys
 
 from pcl.error import PCLCError
 from pcl.lexer import PCLLexer
-# from pcl.parser import PCLParser
+from pcl.parser import PCLParser
 from pcl.codegen import PCLCodegen
 
 __version__ = '0.0.1'
@@ -27,11 +27,6 @@ def get_argparser():
         default='',
         type=str,
         help='Input filename')
-    argparser.add_argument(
-        '--pipeline',
-        nargs='+',
-        default=['lex', 'parse', 'sem', 'codegen', 'bin'],
-        help='Optional pipeline [lex, parse, sem, codegen, bin]')
     argparser.add_argument('-O', default=0, type=int, help='Optimization level')
     argparser.add_argument(
         '-f',
@@ -41,10 +36,6 @@ def get_argparser():
         '-i',
         action='store_true',
         help='Input from stdin, IR output to stdout')
-    argparser.add_argument(
-        '-p',
-        action='store_true',
-        help='Input from stdin, pipeline output to stdout')
     argparser.add_argument(
         '-v',
         action='store_true',
@@ -61,7 +52,7 @@ if __name__ == '__main__':
         print(__version__)
         exit(0)
     else:
-        if (args.filename != '') ^ args.p ^ args.i ^ args.f:
+        if (args.filename != '') ^ args.i ^ args.f:
             if args.filename != '':
                 with open(args.filename) as f:
                     program = f.read()
@@ -72,40 +63,27 @@ if __name__ == '__main__':
             exit(1)
 
     lexer = PCLLexer()
-    codegen = PCLCodegen()
+    parser = PCLParser()
 
-        
-    # parser = PCLParser()
+    pipeline = ['lex']
 
-    order = {
-        'lex' : 0,
-        'parse' : 1,
-        'sem' : 2,
-        'codegen' : 3,
-        'bin' : 4
-    }
 
     pipeline_funcs = {
         'lex' : lexer.tokenize,
-        # 'parse' : parser.parse
+        'parse' : parser.parse
     }
-
-    args.pipeline.sort(key=lambda x: order[x])
-
-    if any([order[args.pipeline[i]] != order[args.pipeline[i+1]] + 1 for i in range(len(args.pipeline) - 1)]):
-        raise PCLCError('Broken Pipeline')
 
 
     program_stage = {-1: program}
 
-    for component in args.pipeline:
+    for component in pipeline:
         program_stage[component] = pipeline_funcs[component](program)
         program = program_stage[component]
         # verbose for now
-        # print(str(list(program)))
+        print(str(list(program)))
 
 
-    if args.p ^ args.f ^ args.i:
+    if args.f ^ args.i:
         print(str(list(program)))
         exit(0)
 

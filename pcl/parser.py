@@ -3,6 +3,7 @@ from pcl.lexer import PCLLexer
 from pcl.error import PCLParserError
 from pcl.ast import *
 from pcl.symbol_table import SymbolTable
+from pcl.codegen import PCLCodegen
 
 class PCLParser(Parser):
     '''
@@ -10,7 +11,7 @@ class PCLParser(Parser):
         built with the SLY tool
     '''
 
-    def __init__(self, builder=None, module=None, printf=None):
+    def __init__(self):
         '''
             Constructor for the PCL Parser
 
@@ -19,15 +20,11 @@ class PCLParser(Parser):
                 module: LLVM module object
                 printf: LLVM printf function
         '''
-        self.builder = builder
-        self.module = module
-        self.printf = printf
+        self.codegen = PCLCodegen()
         self.symbol_table = SymbolTable()
 
     # Tokens from PCLLexer
     tokens = PCLLexer.tokens
-
-    O_equals O_greater O_less O_leq O_geq O_nequals
 
     # Associativity and priority of operators
     precedence = (
@@ -49,9 +46,9 @@ class PCLParser(Parser):
         '''
         def wrapper():
             node = rule()
-            node.builder = self.builder
-            node.module = self.module
-            node.symbol_table = self.symbol_table
+            node.builder = self.codegen.builder
+            node.module = self.codegen.module
+            node.symbol_table = self.codegen.symbol_table
             return node
         return wrapper
 
