@@ -2,6 +2,7 @@ from sly import Parser
 from pcl.lexer import PCLLexer
 from pcl.error import PCLParserError
 from pcl.ast import *
+from pcl.symbol_table import SymbolTable
 
 class PCLParser(Parser):
     '''
@@ -24,8 +25,7 @@ class PCLParser(Parser):
         self.builder = builder
         self.module = module
         self.printf = printf
-
-
+        self.symbol_table = SymbolTable()
 
 
     def error(self, p):

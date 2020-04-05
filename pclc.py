@@ -10,10 +10,12 @@ __version__ = '0.0.1'
 
 ABOUT_MSG = '''
     The PCL Language Compiler
-    Made with <3 during quarantine by (alphabetically)
+    😷 Made with <3 during quarantine by (alphabetically)
         1. Giannis Daras <daras.giannhs@gmail.com>
         2. Marios Papachristou <papachristoumarios@gmail.com>
     Version: {}
+    Repo 🌟 : https://github.com/papachristoumarios/pcl
+    Docs 📖 : https://github.com/papachristoumarios/pcl/wiki
 '''.format(__version__)
 
 
