@@ -136,9 +136,10 @@ class PCLLexer(Lexer):
     COMMA = regex(',')
 
     # "Special" tokens:
-    NAME = r"(" + r"[a-z]" + r'|' + r"[A-Z]" + r")" + r"(" + r"[a-z]" + r'|' + r"[A-Z]" + r"|[0-9]" + r"|" + r"_)*"
+    # NAME = r"(" + r"[a-z]" + r'|' + r"[A-Z]" + r")" + r"(" + r"[a-z]" + r'|' + r"[A-Z]" + r"|[0-9]" + r"|" + r"_)*"
     INT_CONS = r'[0-9]+'
     REAL_CONS = r"[0-9]+(\.[0-9]+(['E', 'e']['\+','\-']?[0-9]+)?)?"
+    NAME = r"(?<!\d\W\_)[^\d\W\_]\w*"
     CHARACTER = "'" + ".|" + "'"
     STRING = r"\"[^\"]*\""
 
@@ -162,6 +163,8 @@ if __name__ == '__main__':
     lexer = PCLLexer()
     s = '''
         program hello;
+        kd0sad
+        0011
         begin
         writeString("hello")
         end.
