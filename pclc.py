@@ -1,6 +1,10 @@
 import argparse
 import sys
 
+from pcl.lexer import PCLLexer
+# from pcl.parser import PCLParser
+from pcl.codegen import PCLCodegen
+
 __version__ = '0.0.1'
 
 ABOUT_MSG = '''
@@ -54,7 +58,7 @@ if __name__ == '__main__':
         print(__version__)
         exit(0)
     else:
-        if args.filename != '' ^ args.p ^ args.i ^ args.f:
+        if (args.filename != '') ^ args.p ^ args.i ^ args.f:
             if args.filename != '':
                 with open(args.filename) as f:
                     program = f.read()
@@ -65,30 +69,34 @@ if __name__ == '__main__':
             exit(1)
 
     lexer = PCLLexer()
-    parser = PCLParser()
+    # parser = PCLParser()
 
     order = {
         'lex' : 0,
         'parse' : 1,
         'sem' : 2,
-        'codegen' : 4,
-        'bin' : 5
+        'codegen' : 3,
+        'bin' : 4
     }
 
     pipeline_funcs = {
-        'lex' : lexer.tokenize
-        'parse' : parser.parse
+        'lex' : lexer.tokenize,
+        # 'parse' : parser.parse
     }
 
     args.pipeline.sort(key=lambda x: order[x])
 
+    if any([args.pipeline[order[i]] != args.pipeline[order[i+1]] + 1 for i in range(len(args.pipeline) - 1)]):
+        raise PCLCError('Broken Pipeline')
+
+
     program_stage = {-1: program}
 
-    for component, func in args.pipeline:
-        program_stage[component] = func(program)
+    for component in args.pipeline:
+        program_stage[component] = pipeline_funcs[component](program)
         program = program_stage[component]
         # verbose for now
-        print(program)
+        print(str(list(program)))
 
     #
     # if args.p ^ args.o ^ args.i:

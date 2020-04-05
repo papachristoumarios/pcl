@@ -31,10 +31,3 @@ class PCLParser(Parser):
     def error(self, p):
         msg = 'Illegal rule {}'.format(p)
         raise PCLParserError(msg)
-
-
-
-
-
-
-if __name__ == '__main__':

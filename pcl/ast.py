@@ -15,19 +15,15 @@ class AST(ABC):
         self.builder = builder
         self.module = module
 
-    @abstractmethod
     def eval(self):
         pass
 
-    @abstractmethod
     def sem(self):
         pass
 
-    @abstractmethod
     def type_check(self):
         pass
 
-    @abstractmethod
     def codegen(self):
         pass
 

@@ -10,5 +10,11 @@ class PCLLexerError(PCLError):
 class PCLParserError(PCLError):
     pass
 
-class PCLSymbolTableError(PCLError):
+class PCLSemError(PCLError):
+    pass
+
+class PCLSymbolTableError(PCLSemError):
+    pass
+
+class PCLCodegenError(PCLError):
     pass
