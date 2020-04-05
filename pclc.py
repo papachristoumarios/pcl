@@ -25,7 +25,7 @@ def get_argparser():
         nargs='+',
         default=['lex', 'parse', 'sem', 'codegen', 'bin'],
         help='Optional pipeline [lex, parse, sem, codegen, bin]')
-    argparser.add_argument('-O', default=0, help='Optimization level')
+    argparser.add_argument('-O', default=0, type=int, help='Optimization level')
     argparser.add_argument(
         '-f',
         action='store_true',
@@ -60,8 +60,39 @@ if __name__ == '__main__':
                     program = f.read()
             else:
                 program = sys.stdin.read()
-
-            print(program)
         else:
             raise PCLCError('Multiple Inputs defined')
             exit(1)
+
+    lexer = PCLLexer()
+    parser = PCLParser()
+
+    order = {
+        'lex' : 0,
+        'parse' : 1,
+        'sem' : 2,
+        'codegen' : 4,
+        'bin' : 5
+    }
+
+    pipeline_funcs = {
+        'lex' : lexer.tokenize
+        'parse' : parser.parse
+    }
+
+    args.pipeline.sort(key=lambda x: order[x])
+
+    program_stage = {-1: program}
+
+    for component, func in args.pipeline:
+        program_stage[component] = func(program)
+        program = program_stage[component]
+        # verbose for now
+        print(program)
+
+    #
+    # if args.p ^ args.o ^ args.i:
+    #     print(program)
+    #     exit(0)
+
+    exit(0)
