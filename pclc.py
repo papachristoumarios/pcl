@@ -1,6 +1,7 @@
 import argparse
 import sys
 
+from pcl.error import PCLCError
 from pcl.lexer import PCLLexer
 # from pcl.parser import PCLParser
 from pcl.codegen import PCLCodegen
@@ -86,7 +87,7 @@ if __name__ == '__main__':
 
     args.pipeline.sort(key=lambda x: order[x])
 
-    if any([args.pipeline[order[i]] != args.pipeline[order[i+1]] + 1 for i in range(len(args.pipeline) - 1)]):
+    if any([order[args.pipeline[i]] != order[args.pipeline[i+1]] + 1 for i in range(len(args.pipeline) - 1)]):
         raise PCLCError('Broken Pipeline')
 
 
@@ -96,11 +97,11 @@ if __name__ == '__main__':
         program_stage[component] = pipeline_funcs[component](program)
         program = program_stage[component]
         # verbose for now
-        print(str(list(program)))
+        # print(str(list(program)))
 
-    #
-    # if args.p ^ args.o ^ args.i:
-    #     print(program)
-    #     exit(0)
+
+    if args.p ^ args.f ^ args.i:
+        print(str(list(program)))
+        exit(0)
 
     exit(0)
