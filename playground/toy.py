@@ -34,10 +34,16 @@ class ToyLexer(Lexer):
 class Constant:
 
     def __init__(self, value, builder, module):
+        self.builder = builder
+        self.module = module
         self.value = int(value)
 
     def eval(self):
         return self.value
+
+    def sem(self):
+        # infers type of node
+        self.typ = int
 
     def codegen(self):
         i = ir.Constant(ir.IntType(8), self.value)
@@ -126,21 +132,27 @@ class ToyParser(Parser):
 
     tokens = ToyLexer.tokens
 
+    # prosetaistikotika + proteraiotita. Going down -> increases priority.
     precedence = (
         ('left', 'PLUS', 'MINUS'),
         ('left', 'TIMES', 'DIVIDE')
     )
 
+    # program = stmt_list
     @_('stmt_list')
     def program(self, p):
         return Program(p.stmt_list)
 
+    # stmt_list := stmt_list stmt
+    # Base of recursion
     @_('stmt')
     def stmt_list(self, p):
         return [p.stmt]
 
+    # Recursion
     @_('stmt_list stmt')
     def stmt_list(self, p):
+        # Attempt to use mutable operations
         p.stmt_list.append(p.stmt)
         return p.stmt_list
 
@@ -240,14 +252,14 @@ class ToyCodeGen:
         with open(llvm_filename, 'w+') as f:
             f.write(final_code)
 
-        os.system('llc -filetype=obj {}'.format(llvm_filename))
+        os.system('llc-8 -filetype=obj {}'.format(llvm_filename))
         os.system('gcc {} -o {}'.format(obj_filename, output_filename))
 
 
 
 if __name__ == '__main__':
-    s = '''print (2 + 2)
-           print (3 + 2)
+    s = '''print 2
+           print 3
     '''
     toy_lexer = ToyLexer()
     lex_result = toy_lexer.tokenize(s)
@@ -255,6 +267,8 @@ if __name__ == '__main__':
     toy_codegen = ToyCodeGen()
 
     toy_parser = ToyParser(toy_codegen.module, toy_codegen.builder, toy_codegen.printf)
+
+    # Returns root of AST
     parse_result = toy_parser.parse(lex_result)
 
     print('Interpreted')
