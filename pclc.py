@@ -52,3 +52,16 @@ if __name__ == '__main__':
 
     if args.v:
         print(__version__)
+        exit(0)
+    else:
+        if args.filename != '' ^ args.p ^ args.i ^ args.f:
+            if args.filename != '':
+                with open(args.filename) as f:
+                    program = f.read()
+            else:
+                program = sys.stdin.read()
+
+            print(program)
+        else:
+            raise PCLCError('Multiple Inputs defined')
+            exit(1)
