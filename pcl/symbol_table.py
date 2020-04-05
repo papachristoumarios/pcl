@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import Enum, unique
 from collections import deque
 
 from pcl.error import PCLSymbolTableError
@@ -80,3 +80,9 @@ class SymbolTable:
 
         msg = 'Unknown variable: {}'.format(c)
         raise PCLSymbolTableError(msg)
+
+    def insert(self, c, t):
+        if len(self.scopes) == 0:
+            raise PCLSymbolTableError('Scopes do not exist')
+
+        self.scopes[-1].insert(c, t)

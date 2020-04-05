@@ -29,5 +29,5 @@ class PCLParser(Parser):
 
 
     def error(self, p):
-        msg = 'Illegal rule {}'.format(p)
+        msg = 'Illegal rule {}'.format(str(p))
         raise PCLParserError(msg)

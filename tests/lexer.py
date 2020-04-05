@@ -1,3 +1,4 @@
+import pytest
 from pcl.lexer import PCLLexer as Lexer
 
 lexer = Lexer()
