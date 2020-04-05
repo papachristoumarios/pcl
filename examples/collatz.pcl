@@ -1,0 +1,16 @@
+program collatz;
+
+label x, y;
+forward procedure hello();
+var x : integer;
+
+begin
+  x := 6;
+  while x > 1 do
+  begin
+    writeInteger(x);
+    if x mod 2 = 0 then x := x div 2
+    else x := 3 * x + 1;
+  end;
+
+end.
