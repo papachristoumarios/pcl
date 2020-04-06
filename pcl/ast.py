@@ -1,6 +1,7 @@
+import json
 from abc import ABC
 from collections import deque
-import json
+from error import PCLParserError, PCLSemError, PCLCodegenError
 
 class AST(ABC):
     '''
@@ -17,6 +18,7 @@ class AST(ABC):
         self.builder = builder
         self.module = module
         self.symbol_table = symbol_table
+        self.stype = None
 
     def eval(self):
         pass
@@ -24,8 +26,12 @@ class AST(ABC):
     def sem(self):
         pass
 
-    def type_check(self):
-        pass
+    def type_check(self, target):
+        if self.stype == target:
+            return True
+        else:
+            msg = '{}: Expected type {}, got type {}'.format(self.__class__.__name__, target, self.stype)
+            raise PCLSemError(msg)
 
     def codegen(self):
         pass
@@ -35,14 +41,17 @@ class AST(ABC):
         print(type(self))
         d = vars(self)
         for k, v in d.items():
-            print(indent * ' ', end='')
+
             if k not in ['module', 'builder', 'symbol_table']:
                 if isinstance(v, AST):
+                    print((indent - 1) * ' ', end='')
                     v.pprint(indent + 1)
                 elif isinstance(v, deque):
                     for x in v:
+                        print((indent - 1) * ' ', end='')
                         x.pprint(indent + 1)
                 else:
+                    print((indent + 2) * ' ', end='')
                     print('{} : {}'.format(k, v))
 
 
@@ -291,6 +300,8 @@ class AddressOf(RValue):
     '''
 
     def __init__(self, lvalue, builder, module, symbol_table):
+        if isinstance(lvalue, RValue):
+            raise PCLParserError('Tried to access the address of an RValue')
         super(AddressOf, self).__init__(builder, module, symbol_table)
         self.lvalue = lvalue
 

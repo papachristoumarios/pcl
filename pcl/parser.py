@@ -443,4 +443,4 @@ if __name__ == '__main__':
     parser = PCLParser()
     program = parser.parse(lexer.tokenize(s))
 
-    import pdb; pdb.set_trace()
+    program.pprint()
