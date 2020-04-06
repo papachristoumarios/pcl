@@ -43,9 +43,9 @@ class PCLParser(Parser):
         ('left', 'TIMES', 'FRAC', 'DIV', 'MOD', 'AND'),
         ('nonassoc', 'UN_OP'),
         ('nonassoc', 'EXP'),
-        ('nonassoc', 'ADDR_OP'),
+        ('nonassoc', 'PTR'),
         ('nonassoc', 'BRACKETS'),
-        ('nonassoc', 'RVALUE_R'),
+        ('nonassoc', 'RVALUE'),
         ('nonassoc', 'SINGLE_IF'),
         ('nonassoc', 'ELSE')
     )
@@ -68,6 +68,26 @@ class PCLParser(Parser):
             module=self.module,
             symbol_table=self.symbol_table)
 
+    @_('VAR var_list')
+    def local(self, p):
+        return VarList(vars=p.var_list, builder=self.builder,
+                       module=self.module, symbol_table=self.symbol_table)
+
+    @_('LABEL id_list SEMICOLON')
+    def local(self, p):
+        return Label(ids=p.id_list, builder=self.builder, module=self.module,
+                     symbol_table=self.symbol_table)
+
+    @_('header SEMICOLON body SEMICOLON')
+    def local(self, p):
+        return LocalHeader(header=p.header, body=p.body, builder=self.builder,
+                           module=self.module, symbol_table=self.symbol_table)
+
+    @_('FORWARD header SEMICOLON')
+    def local(self, p):
+        return Forward(header=p.header, builder=self.builder,
+                       module=self.module, symbol_table=self.symbol_table)
+
     @_('')
     def local_list(self, p):
         return deque([])
@@ -76,11 +96,6 @@ class PCLParser(Parser):
     def local_list(self, p):
         p.local_list.append(p.local)
         return p.local_list
-
-    @_('VAR var_list')
-    def local(self, p):
-        return VarList(vars=p.var_list, builder=self.builder,
-                       module=self.module, symbol_table=self.symbol_table)
 
     @_('NAME id_list DCOLON type_ SEMICOLON')
     def var(self, p):
@@ -110,21 +125,6 @@ class PCLParser(Parser):
         p.var_list.append(p.var)
         return p.var_list
 
-    @_('LABEL id_list SEMICOLON')
-    def local(self, p):
-        return Label(ids=p.id_list, builder=self.builder, module=self.module,
-                     symbol_table=self.symbol_table)
-
-    @_('header SEMICOLON body SEMICOLON')
-    def local(self, p):
-        return LocalHeader(header=p.header, body=p.body, builder=self.builder,
-                           module=self.module, symbol_table=self.symbol_table)
-
-    @_('FORWARD header SEMICOLON')
-    def local(self, p):
-        return Forward(header=p.header, builder=self.builder,
-                       module=self.module, symbol_table=self.symbol_table)
-
     @_('PROCEDURE NAME LPAREN formal_list RPAREN')
     def header(self, p):
         return Header(header_type=p[0], id_=p.NAME, formals=p.formal_list,
@@ -151,6 +151,11 @@ class PCLParser(Parser):
                       func_type=p.type_, builder=self.builder,
                       module=self.module, symbol_table=self.symbol_table)
 
+    @_('id_list DCOLON type_', 'VAR id_list DCOLON type_')
+    def formal(self, p):
+        return Formal(ids=p.id_list, type_=p.type_, builder=self.builder,
+                      module=self.module, symbol_table=self.symbol_table)
+
     @_('formal semicolon_formal_list')
     def formal_list(self, p):
         p.semicolon_formal_list.append(formal)
@@ -164,11 +169,6 @@ class PCLParser(Parser):
     def semicolon_formal_list(self, p):
         p.semicolon_formal_list.append(p.formal)
         return p.semicolon_formal_list
-
-    @_('id_list DCOLON type_', 'VAR id_list DCOLON type_')
-    def formal(self, p):
-        return Formal(ids=p.id_list, type_=p.type_, builder=self.builder,
-                      module=self.module, symbol_table=self.symbol_table)
 
 
     # FROM HERE
@@ -275,13 +275,14 @@ class PCLParser(Parser):
         return Dispose(lvalue=p.lvalue, builder=self.builder,
                        module=self.module, symbol_table=self.symbol_table)
 
+    @_('rvalue %prec RVALUE')
+    def expr(self, p):
+       return p.rvalue
+
     @_('lvalue')
     def expr(self, p):
         return p.lvalue
 
-    @_('rvalue %prec RVALUE_R')
-    def expr(self, p):
-        return p.rvalue
 
     @_('NAME')
     def lvalue(self, p):
@@ -339,18 +340,14 @@ class PCLParser(Parser):
     def rvalue(self, p):
         return p.rvalue
 
-    @_('NIL')
-    def rvalue(self, p):
-        return self.the_nil
-
-    @_('call')
-    def rvalue(self, p):
-        return p.call
-
-    @_('PTR lvalue %prec ADDR_OP')
+    @_('PTR lvalue')
     def rvalue(self, p):
         return Ref(lvalue=p[1], builder=self.builder, module=self.module,
                    symbol_table=self.symbol_table)
+
+    @_('NIL')
+    def rvalue(self, p):
+        return self.the_nil
 
     @_('unop expr %prec UN_OP')
     def rvalue(self, p):
@@ -361,16 +358,20 @@ class PCLParser(Parser):
             module=self.module,
             symbol_table=self.symbol_table)
 
-    @_('expr binop expr')
-    def rvalue(self, p):
-        return BinOp(
-            op=p.binop,
-            lhs=p.expr0,
-            rhs=p.expr1,
-            builder=self.builder,
-            module=self.module,
-            symbol_table=self.symbol_table)
 
+    @_('expr PLUS expr', 'expr MINUS expr', 'expr TIMES expr')
+    def rvalue(self, p):
+       return BinOp(
+       op=p[1],
+       lhs=p[0],
+       rhs=p[-1],
+       builder=self.builder,
+       module=self.module,
+       symbol_table=self.symbol_table)
+
+    @_('call')
+    def rvalue(self, p):
+        return p.call
 
     @_('NAME LPAREN RPAREN')
     def call(self, p):
@@ -401,10 +402,11 @@ class PCLParser(Parser):
     def unop(self, p):
         return p[0]
 
-    @_('PLUS', 'MINUS', 'TIMES', 'FRAC', 'GT', 'LT', 'GTE',
-       'LTE', 'DIV', 'MOD', 'OR', 'AND', 'EQUAL', 'NEG')
-    def binop(self, p):
-        return p[0]
+    #
+    # @_('MINUS', 'TIMES', 'FRAC', 'GT', 'LT', 'GTE',
+    #    'LTE', 'DIV', 'MOD', 'OR', 'AND', 'EQUAL', 'NEG')
+    # def binop(self, p):
+    #     return p[0]
 
     def error(self, p):
         msg = 'Illegal rule {}'.format(str(p))
@@ -415,7 +417,6 @@ if __name__ == '__main__':
     s = '''
         program hello;
         begin
-        writeString("Hello world!\n")
         end.
         '''
     lexer = PCLLexer()
