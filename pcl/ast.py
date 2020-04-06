@@ -6,7 +6,7 @@ class AST(ABC):
         The Abstract Base Class for the AST Node
     '''
 
-    def __init__(self, builder=None, module=None, symbol_table=None):
+    def __init__(self, builder, module, symbol_table):
         '''
             AST Initializer
             Args:
@@ -31,10 +31,9 @@ class AST(ABC):
 
 
 class Program(AST):
-
     def __init__(self, id_, body, builder, module, symbol_table):
         super(Program, self).__init__(builder, module, symbol_table)
-        self.id_ = id
+        self.id_ = id_
         self.body = body
 
 
@@ -47,13 +46,18 @@ class Body(AST):
 
 
 class Local(AST):
-
     def __init__(self, builder, module, symbol_table):
         super(Local, self).__init__(builder, module, symbol_table)
 
 
-class Var(Local):
+class LocalHeader(Local):
+    def __init__(self, header, body, builder, module, symbol_table):
+        super(LocalHeader, self).__init__(builder, module, symbol_table)
+        self.header = header
+        self.body = body
 
+
+class Var(Local):
     def __init__(self, ids, type_, builder, module, symbol_table):
         super(Var, self).__init__(builder, module, symbol_table)
         self.ids = ids
@@ -69,12 +73,9 @@ class VarList(Local):
 
 class Label(Local):
 
-    def __init__(self, ids, header, body, builder, module, symbol_table):
+    def __init__(self, ids, builder, module, symbol_table):
         super(Label, self).__init__(builder, module, symbol_table)
         self.ids = ids
-        self.header = header
-        self.body = body
-
 
 class Forward(Local):
 
@@ -90,10 +91,10 @@ class Header(AST):
             header_type,
             id_,
             formals,
+            func_type,
             builder,
             module,
-            symbol_table,
-            func_type=None):
+            symbol_table):
         super(Header, self).__init__(builder, module, symbol_table)
         self.header_type = header_type
         self.id_ = id_
@@ -116,10 +117,13 @@ class Type(AST):
         self.type_ = type_
 
 
-class DerefType(Type):
-
+class PointerType(Type):
+    '''
+        Declaration of a new pointer.
+        Example: ^integer
+    '''
     def __init__(self, type_, builder, module, symbol_table):
-        super(DerefType, self).__init__(type_, builder, module, symbol_table)
+        super(PointerType, self).__init__(type_, builder, module, symbol_table)
 
 
 class ArrayType(Type):
@@ -130,8 +134,7 @@ class ArrayType(Type):
 
 
 class Statement(AST):
-
-    def __init__(self, name, builder, module, symbol_table, **kwargs):
+    def __init__(self, builder, module, symbol_table, **kwargs):
         super(Statement, self).__init__(builder, module, symbol_table)
         self.name = kwargs.get('name', None)
 
@@ -141,14 +144,6 @@ class Block(Statement):
     def __init__(self, stmt_list, builder, module, symbol_table):
         super(Block, self).__init__(builder, module, symbol_table)
         self.stmt_list = stmt_list
-
-
-class LValue(Statement):
-
-    def __init__(self, l_value, expr, builder, module, symbol_table):
-        super(LValue, self).__init__(builder, module, symbol_table)
-        self.l_value = l_value
-        self.expr = expr
 
 
 class Call(AST):
@@ -186,25 +181,26 @@ class Goto(Statement):
 class Return(Statement):
     pass
 
+class Empty(Statement):
+    pass
 
 class New(Statement):
 
-    def __init__(self, expr, l_value, builder, module, symbol_table):
+    def __init__(self, expr, lvalue, builder, module, symbol_table):
         super(New, self).__init__(builder, module, symbol_table)
         self.expr = expr
-        self.l_value = l_value
+        self.lvalue = lvalue
 
 
 class Dispose(Statement):
 
-    def __init__(self, l_value, builder, module, symbol_table):
+    def __init__(self, lvalue, builder, module, symbol_table):
         super(Dispose, self).__init__(builder, module, symbol_table)
-        self.l_value = l_value
+        self.lvalue = lvalue
 
 
 class Expr(AST):
     pass
-
 
 class RValue(Expr):
 
@@ -244,15 +240,15 @@ class BoolConst(RValue):
 
 class Ref(RValue):
 
-    def __init__(self, l_value, builder, module, symbol_table):
+    def __init__(self, lvalue, builder, module, symbol_table):
         super(Ref, self).__init__(builder, module, symbol_table)
-        self.l_value = l_value
+        self.lvalue = lvalue
 
 
 class Nil(RValue):
 
     def __init__(self, builder, module, symbol_table):
-        super(RefConst, self).__init__(builder, module, symbol_table)
+        super(Nil, self).__init__(builder, module, symbol_table)
         self.value = None
 
 
@@ -271,9 +267,69 @@ class BinOp(RValue):
         self.lhs = lhs
         self.rhs = rhs
 
+class AddressOf(RValue):
+    '''
+        Declaration of address of an l-value
+        with r-value = @l-value
+    '''
+
+    def __init__(self, lvalue, builder, module, symbol_table):
+        super(AddressOf, self).__init__(builder, module, symbol_table)
+        self.lvalue = lvalue
 
 class LValue(Expr):
-
-    def __init__(self, builder, module, **kwargs):
+    def __init__(self, builder, module, symbol_table):
         super(LValue, self).__init__(builder, module, symbol_table)
-        self.kwargs = kwargs
+
+
+class NameLValue(LValue):
+    def __init__(self, id_, builder, module, symbol_table):
+        super(NameLValue, self).__init__(builder, module, symbol_table)
+        self.id_ = id_
+
+
+class Result(LValue):
+    def __init__(self, builder, module, symbol_table):
+        super(Result, self).__init__(builder, module, symbol_table)
+
+class StringLiteral(LValue):
+    def __init__(self, literal, builder, module, symbol_table):
+        super(StringLiteral, self).__init__(builder, module, symbol_table)
+        self.literal = literal
+
+
+class Deref(LValue):
+    '''
+        Declaration of dereference of a pointer
+        If e = t^ then ^e = t
+    '''
+
+    def __init__(self, expr, builder, module, symbol_table):
+        super(Deref, self).__init__(builder, module, symbol_table)
+        self.expr = expr
+
+
+class SetExpression(LValue):
+    def __init__(self, lvalue, expr, builder, module, symbol_table):
+        super(SetExpression, self).__init__(builder, module, symbol_table)
+        self.lvalue = lvalue
+        self.expr = expr
+
+class SetBlock(LValue):
+    def __init__(self, lvalue, block, builder, module, symbol_table):
+        super(SetBlock, self).__init__(builder, module, symbol_table)
+        self.lvalue = lvalue
+        self.block = block
+
+class SetCall(LValue):
+    def __init__(self, lvalue, call, builder, module, symbol_table):
+        super(SetCall, self).__init__(builder, module, symbol_table)
+        self.lvalue = lvalue
+        self.call = call
+
+
+class LBrack(LValue):
+    def __init__(self, lvalue, expr, builder, module, symbol_table):
+        super(LBrack, self).__init__(builder, module, symbol_table)
+        self.lvalue = lvalue
+        self.expr = expr
