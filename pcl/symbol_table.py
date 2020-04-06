@@ -1,16 +1,14 @@
-from enum import Enum, unique
+from enum import Enum
 from collections import deque
 
 from pcl.error import PCLSymbolTableError
 
-@unique
 class BasicType(Enum):
     T_INT = 'int'
     T_BOOL = 'boolean'
     T_REAL = 'real'
     T_CHAR = 'char'
 
-@unique
 class Composer(Enum):
     T_NO_COMP = 'no_composer'
     T_CONST_ARRAY = 'const_array'
@@ -24,6 +22,9 @@ class SType:
             raise PCLSymbolTableError('Invalid type')
         self.basic_type = basic_type
         self.composer = composer
+
+    def __eq__(self, other):
+        return self.basic_type == other.basic_type and self.composer == other.composer
 
 class SymbolEntry:
 
