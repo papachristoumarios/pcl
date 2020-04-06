@@ -35,7 +35,7 @@ class PCLParser(Parser):
             symbol_table=self.symbol_table)
 
     # Tokens from PCLLexer
-    tokens = PCLLexer.tokens - {NEWLINE, COMMENT}
+    tokens = PCLLexer.tokens - {COMMENT}
 
     # Associativity and priority of operators
     precedence = (
