@@ -56,7 +56,7 @@ class PCLLexer(Lexer):
         LSQUARE,
         RSQUARE,
         EXP,
-        PTR,
+        ADDRESSOF,
         NEG,
         # Separators
         SET,
@@ -124,7 +124,7 @@ class PCLLexer(Lexer):
     LSQUARE = regex('[')
     RSQUARE = regex(']')
     EXP = regex('^')
-    PTR = regex('@')
+    ADDRESSOF = regex('@')
     NEG = regex('<>')
 
     # Separators

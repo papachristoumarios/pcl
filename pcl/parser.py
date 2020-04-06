@@ -1,5 +1,6 @@
 from sly import Parser
 from collections import deque
+import pprint
 
 from pcl.lexer import PCLLexer
 from pcl.error import PCLParserError
@@ -28,10 +29,10 @@ class PCLParser(Parser):
         self.builder = self.codegen.builder
         self.module = self.codegen.module
 
-
-        self.the_nil = Nil(builder=self.builder, module=self.module, symbol_table=self.symbol_table)
-
-    debugfile = 'parser.out'
+        self.the_nil = Nil(
+            builder=self.builder,
+            module=self.module,
+            symbol_table=self.symbol_table)
 
     # Tokens from PCLLexer
     tokens = PCLLexer.tokens - {NEWLINE, COMMENT}
@@ -43,7 +44,7 @@ class PCLParser(Parser):
         ('left', 'TIMES', 'FRAC', 'DIV', 'MOD', 'AND'),
         ('nonassoc', 'UN_OP'),
         ('nonassoc', 'EXP'),
-        ('nonassoc', 'PTR'),
+        ('nonassoc', 'ADDRESSOF'),
         ('nonassoc', 'BRACKETS'),
         ('nonassoc', 'RVALUE'),
         ('nonassoc', 'SINGLE_IF'),
@@ -144,7 +145,6 @@ class PCLParser(Parser):
                       builder=self.builder, module=self.module,
                       symbol_table=self.symbol_table)
 
-
     @_('FUNCTION NAME LPAREN RPAREN DCOLON type_')
     def header(self, p):
         return Header(header_type=p[0], id_=p.NAME, formals=deque([]),
@@ -170,7 +170,6 @@ class PCLParser(Parser):
         p.semicolon_formal_list.append(p.formal)
         return p.semicolon_formal_list
 
-
     # FROM HERE
     @_('INTEGER', 'REAL', 'BOOLEAN', 'CHAR')
     def type_(self, p):
@@ -193,7 +192,6 @@ class PCLParser(Parser):
         return PointerType(type_=p.type_, builder=self.builder,
                            module=self.module, symbol_table=self.symbol_table)
 
-
     @_('BEGIN stmt semicolon_stmt_list END')
     def block(self, p):
         p.semicolon_stmt_list.appendleft(p.stmt)
@@ -208,24 +206,60 @@ class PCLParser(Parser):
         p.semicolon_stmt_list.append(p.stmt)
         return p.semicolon_stmt_list
 
+    # STATEMENT
     @_('')
     def stmt(self, p):
-        return Empty(builder=self.builder, module=self.module, symbol_table=self.symbol_table)
-
+        return Empty(
+            builder=self.builder,
+            module=self.module,
+            symbol_table=self.symbol_table)
 
     @_('lvalue SET expr')
     def stmt(self, p):
-        return SetExpression(lvalue=p.lvalue, expr=p.expr, builder=self.builder, module=self.module, symbol_table=self.symbol_table)
+        return SetExpression(
+            lvalue=p.lvalue,
+            expr=p.expr,
+            builder=self.builder,
+            module=self.module,
+            symbol_table=self.symbol_table)
 
-    @_('lvalue SET block')
+    @_('NEW lvalue')
     def stmt(self, p):
-        return SetBlock(lvalue=p.lvalue, block=p.block, builder=self.builder,
-                        module=self.module, symbol_table=self.symbol_table)
+        return New(expr=None, lvalue=p.lvalue, builder=self.builder,
+                   module=self.module, symbol_table=self.symbol_table)
 
-    @_('lvalue SET call')
+    @_('NEW LSQUARE expr RSQUARE lvalue')
     def stmt(self, p):
-        return SetCall(lvalue=p.lvalue, call=p.call, builder=self.builder,
+        return New(expr=p.expr, lvalue=p.lvalue, builder=self.builder,
+                   module=self.module, symbol_table=self.symbol_table)
+
+    @_('DISPOSE LSQUARE RSQUARE lvalue', 'DISPOSE lvalue')
+    def stmt(self, p):
+        return Dispose(lvalue=p.lvalue, builder=self.builder,
                        module=self.module, symbol_table=self.symbol_table)
+
+    @_('RETURN')
+    def stmt(self, p):
+        return Return(
+            builder=self.builder,
+            module=self.module,
+            symbol_table=self.symbol_table)
+
+    @_('GOTO NAME')
+    def stmt(self, p):
+        return Goto(id_=p.NAME, builder=self.builder, module=self.module,
+                    symbol_table=self.symbol_table)
+
+    @_('WHILE expr DO stmt')
+    def stmt(self, p):
+        return While(expr=p.expr, stmt=p.stms, builder=self.builder,
+                     module=self.module, symbol_table=self.symbol_table)
+
+
+    @_('NAME DCOLON stmt')
+    def stmt(self, p):
+        return Statement(name=p.NAME, builder=self.builder, module=self.module,
+                         symbol_table=self.symbol_table)
 
 
     @_('IF expr THEN stmt %prec SINGLE_IF')
@@ -240,71 +274,38 @@ class PCLParser(Parser):
                   builder=self.builder, module=self.module,
                   symbol_table=self.symbol_table)
 
-
-    @_('WHILE expr DO stmt')
+    @_('call')
     def stmt(self, p):
-        return While(expr=p.expr, stmt=p.stms, builder=self.builder,
-                     module=self.module, symbol_table=self.symbol_table)
+        return p.call
 
-    @_('NAME DCOLON stmt')
-    def stmt(self, p):
-        return Statement(name=p.NAME, builder=self.builder, module=self.module,
-                         symbol_table=self.symbol_table)
-
-    @_('GOTO NAME')
-    def stmt(self, p):
-        return Goto(id_=p.NAME, builder=self.builder, module=self.module,
-                    symbol_table=self.symbol_table)
-
-    @_('RETURN')
-    def stmt(self, p):
-        return Return(builder=self.builder, module=self.module, symbol_table=self.symbol_table)
-
-    @_('NEW lvalue')
-    def stmt(self, p):
-        return New(expr=None, lvalue=p.lvalue, builder=self.builder,
-                   module=self.module, symbol_table=self.symbol_table)
-
-    @_('NEW LSQUARE expr RSQUARE lvalue')
-    def stmt(self, p):
-        return New(expr=p.expr, lvalue=p.lvalue, builder=self.builder,
-                   module=self.module, symbol_table=self.symbol_table)
-
-    @_('DISPOSE lvalue', 'DISPOSE LSQUARE RSQUARE lvalue')
-    def stmt(self, p):
-        return Dispose(lvalue=p.lvalue, builder=self.builder,
-                       module=self.module, symbol_table=self.symbol_table)
-
+    # EXPRESSION := lvalue | rvalue (precedence to r-value)
     @_('rvalue %prec RVALUE')
     def expr(self, p):
-       return p.rvalue
+        return p.rvalue
 
     @_('lvalue')
     def expr(self, p):
         return p.lvalue
 
-
+    # LVALUE
     @_('NAME')
     def lvalue(self, p):
         return NameLValue(id_=p.NAME, builder=self.builder, module=self.module,
                           symbol_table=self.symbol_table)
 
-    @_('RESULT')
-    def lvalue(self, p):
-        return Result(builder=self.builder, module=self.module,
-                      symbol_table=self.symbol_table)
-
     @_('STRING')
     def lvalue(self, p):
-        return StringLiteral(literal=p[0], builder=self.builder,
-                             module=self.module, symbol_table=self.symbol_table)
-
+        return StringLiteral(
+            literal=p[0],
+            builder=self.builder,
+            module=self.module,
+            symbol_table=self.symbol_table)
 
     @_('lvalue LSQUARE expr RSQUARE %prec BRACKETS')
     def lvalue(self, p):
         return LBrack(lvalue=p.lvalue, expr=p.expr, module=self.module,
-                            builder=self.builder,
-                            symbol_table=self.symbol_table)
+                      builder=self.builder,
+                      symbol_table=self.symbol_table)
 
     @_('expr EXP')
     def lvalue(self, p):
@@ -315,11 +316,19 @@ class PCLParser(Parser):
     def lvalue(self, p):
         return p.lvalue
 
+    @_('RESULT')
+    def lvalue(self, p):
+        return Result(builder=self.builder, module=self.module,
+                      symbol_table=self.symbol_table)
+
+    # RVALUE
     @_('INT_CONS')
     def rvalue(self, p):
-        return IntegerConst(value=p[0], builder=self.builder, module=self.module,
-                            symbol_table=self.symbol_table)
-
+        return IntegerConst(
+            value=p[0],
+            builder=self.builder,
+            module=self.module,
+            symbol_table=self.symbol_table)
 
     @_('TRUE', 'FALSE')
     def rvalue(self, p):
@@ -340,15 +349,17 @@ class PCLParser(Parser):
     def rvalue(self, p):
         return p.rvalue
 
-    @_('PTR lvalue')
+    @_('ADDRESSOF expr')
     def rvalue(self, p):
-        return Ref(lvalue=p[1], builder=self.builder, module=self.module,
-                   symbol_table=self.symbol_table)
+        # TODO address of must impose lvalue!!!
+        return AddressOf(lvalue=p[1], builder=self.builder, module=self.module,
+                         symbol_table=self.symbol_table)
 
     @_('NIL')
     def rvalue(self, p):
         return self.the_nil
 
+    # UNARY OPERATORS
     @_('unop expr %prec UN_OP')
     def rvalue(self, p):
         return UnOp(
@@ -358,33 +369,50 @@ class PCLParser(Parser):
             module=self.module,
             symbol_table=self.symbol_table)
 
-
-    @_('expr PLUS expr', 'expr MINUS expr', 'expr TIMES expr')
+    @_('expr PLUS expr',
+       'expr MINUS expr',
+       'expr TIMES expr',
+       'expr FRAC expr',
+       'expr GT expr',
+       'expr LT expr',
+       'expr GTE expr',
+       'expr LTE expr',
+       'expr DIV expr',
+       'expr MOD expr',
+       'expr OR expr',
+       'expr AND expr',
+       'expr EQUAL expr',
+       'expr NEG expr',
+       )
     def rvalue(self, p):
-       return BinOp(
-       op=p[1],
-       lhs=p[0],
-       rhs=p[-1],
-       builder=self.builder,
-       module=self.module,
-       symbol_table=self.symbol_table)
+        return BinOp(
+            op=p.expr0,
+            lhs=p[0],
+            rhs=p.expr1,
+            builder=self.builder,
+            module=self.module,
+            symbol_table=self.symbol_table)
 
-    @_('call')
-    def rvalue(self, p):
-        return p.call
+    @_('NOT', 'PLUS', 'MINUS')
+    def unop(self, p):
+        return p[0]
+
+    # CALL
+    @_('NAME LPAREN expr comma_expr_list RPAREN')
+    def call(self, p):
+        p.comma_expr_list.appendleft(p.expr)
+        return Call(
+            id_=p.NAME,
+            exprs=p.comma_expr_list,
+            builder=self.builder,
+            module=self.module,
+            symbol_table=self.symbol_table)
 
     @_('NAME LPAREN RPAREN')
     def call(self, p):
-        return Call(id_=p.NAME, expr=None, builder=self.builder,
-                    module=self.module, symbol_table=self.symbol_table)
-
-
-    @_('NAME LPAREN expr comma_expr_list RPAREN')
-    def call(self, p):
-        exprs = p.comma_expr_list.appendleft(p.expr)
         return Call(
             id_=p.NAME,
-            exprs=exprs,
+            exprs=deque([]),
             builder=self.builder,
             module=self.module,
             symbol_table=self.symbol_table)
@@ -398,16 +426,6 @@ class PCLParser(Parser):
         p.comma_expr_list.append(p.expr)
         return p.comma_expr_list
 
-    @_('NOT', 'PLUS', 'MINUS')
-    def unop(self, p):
-        return p[0]
-
-    #
-    # @_('MINUS', 'TIMES', 'FRAC', 'GT', 'LT', 'GTE',
-    #    'LTE', 'DIV', 'MOD', 'OR', 'AND', 'EQUAL', 'NEG')
-    # def binop(self, p):
-    #     return p[0]
-
     def error(self, p):
         msg = 'Illegal rule {}'.format(str(p))
         raise PCLParserError(msg)
@@ -417,11 +435,12 @@ if __name__ == '__main__':
     s = '''
         program hello;
         begin
+            writeString("hello");
+            x := 2;
         end.
         '''
     lexer = PCLLexer()
     parser = PCLParser()
     program = parser.parse(lexer.tokenize(s))
 
-    import pdb
-    pdb.set_trace()
+    import pdb; pdb.set_trace()

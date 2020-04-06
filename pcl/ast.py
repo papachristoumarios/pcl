@@ -1,5 +1,6 @@
 from abc import ABC
-
+from collections import deque
+import json
 
 class AST(ABC):
     '''
@@ -28,6 +29,22 @@ class AST(ABC):
 
     def codegen(self):
         pass
+
+    def pprint(self, indent=0):
+        print(indent * ' ', end='')
+        print(type(self))
+        d = vars(self)
+        for k, v in d.items():
+            print(indent * ' ', end='')
+            if k not in ['module', 'builder', 'symbol_table']:
+                if isinstance(v, AST):
+                    v.pprint(indent + 1)
+                elif isinstance(v, deque):
+                    for x in v:
+                        x.pprint(indent + 1)
+                else:
+                    print('{} : {}'.format(k, v))
+
 
 
 class Program(AST):
@@ -314,18 +331,6 @@ class SetExpression(LValue):
         super(SetExpression, self).__init__(builder, module, symbol_table)
         self.lvalue = lvalue
         self.expr = expr
-
-class SetBlock(LValue):
-    def __init__(self, lvalue, block, builder, module, symbol_table):
-        super(SetBlock, self).__init__(builder, module, symbol_table)
-        self.lvalue = lvalue
-        self.block = block
-
-class SetCall(LValue):
-    def __init__(self, lvalue, call, builder, module, symbol_table):
-        super(SetCall, self).__init__(builder, module, symbol_table)
-        self.lvalue = lvalue
-        self.call = call
 
 
 class LBrack(LValue):
