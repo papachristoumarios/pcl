@@ -65,7 +65,6 @@ class PCLLexer(Lexer):
         DCOLON,
         COMMA,
         # others
-        DIGIT,
         INT_CONS,
         REAL_CONS,
         CHARACTER,
