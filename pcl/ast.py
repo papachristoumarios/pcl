@@ -1,7 +1,8 @@
 import json
-from abc import ABC
+from abc import ABC, abstractmethod
 from collections import deque
 from error import PCLParserError, PCLSemError, PCLCodegenError
+
 
 class AST(ABC):
     '''
@@ -14,12 +15,14 @@ class AST(ABC):
             Args:
                 builder: LLVM IR builder module
                 module: LLVM module
+                symbol_table: The symbol table
         '''
         self.builder = builder
         self.module = module
         self.symbol_table = symbol_table
         self.stype = None
 
+    # TODO add @abstractmethod
     def eval(self):
         pass
 
@@ -27,16 +30,27 @@ class AST(ABC):
         pass
 
     def type_check(self, target):
+        '''
+            Checks if the inferred type of the node equals the
+            desired type target
+            Args:
+                type: The desired type
+        '''
         if self.stype == target:
             return True
         else:
-            msg = '{}: Expected type {}, got type {}'.format(self.__class__.__name__, target, self.stype)
+            msg = '{}: Expected type {}, got type {}'.format(
+                self.__class__.__name__, target, self.stype)
             raise PCLSemError(msg)
 
     def codegen(self):
         pass
 
     def pprint(self, indent=0):
+        '''
+            Pretty printing of a node's contents and
+            its sucessors. Call it with root.pprint()
+        '''
         print(indent * ' ', end='')
         print(type(self))
         d = vars(self)
@@ -53,7 +67,6 @@ class AST(ABC):
                 else:
                     print((indent + 2) * ' ', end='')
                     print('{} : {}'.format(k, v))
-
 
 
 class Program(AST):
@@ -103,6 +116,7 @@ class Label(Local):
         super(Label, self).__init__(builder, module, symbol_table)
         self.ids = ids
 
+
 class Forward(Local):
 
     def __init__(self, header, builder, module, symbol_table):
@@ -148,6 +162,7 @@ class PointerType(Type):
         Declaration of a new pointer.
         Example: ^integer
     '''
+
     def __init__(self, type_, builder, module, symbol_table):
         super(PointerType, self).__init__(type_, builder, module, symbol_table)
 
@@ -160,6 +175,7 @@ class ArrayType(Type):
 
 
 class Statement(AST):
+
     def __init__(self, builder, module, symbol_table, **kwargs):
         super(Statement, self).__init__(builder, module, symbol_table)
         self.name = kwargs.get('name', None)
@@ -181,6 +197,9 @@ class Call(AST):
 
 
 class If(Statement):
+    '''
+        If statement.
+    '''
 
     def __init__(self, expr, stmt, else_stmt, builder, module, symbol_table):
         super(If, self).__init__(builder, module, symbol_table)
@@ -190,6 +209,9 @@ class If(Statement):
 
 
 class While(Statement):
+    '''
+        While statement.
+    '''
 
     def __init__(self, expr, stmt, builder, module, symbol_table):
         super(While, self).__init__(builder, module, symbol_table)
@@ -198,6 +220,9 @@ class While(Statement):
 
 
 class Goto(Statement):
+    '''
+        Goto statement.
+    '''
 
     def __init__(self, id_, builder, module, symbol_table):
         super(Goto, self).__init__(builder, module, symbol_table)
@@ -205,12 +230,23 @@ class Goto(Statement):
 
 
 class Return(Statement):
+    '''
+        Return statement.
+    '''
     pass
+
 
 class Empty(Statement):
+    '''
+        Empty Statement.
+    '''
     pass
 
+
 class New(Statement):
+    '''
+        New Statement.
+    '''
 
     def __init__(self, expr, lvalue, builder, module, symbol_table):
         super(New, self).__init__(builder, module, symbol_table)
@@ -219,6 +255,9 @@ class New(Statement):
 
 
 class Dispose(Statement):
+    '''
+        Dispose statement.
+    '''
 
     def __init__(self, lvalue, builder, module, symbol_table):
         super(Dispose, self).__init__(builder, module, symbol_table)
@@ -226,15 +265,25 @@ class Dispose(Statement):
 
 
 class Expr(AST):
+    '''
+        Base class for expressions.
+    '''
     pass
 
+
 class RValue(Expr):
+    '''
+        Base class for the RValue.
+    '''
 
     def __init__(self, builder, module, symbol_table):
         super(RValue, self).__init__(builder, module, symbol_table)
 
 
 class IntegerConst(RValue):
+    '''
+        Integer constant. Holds integer numbers.
+    '''
 
     def __init__(self, value, builder, module, symbol_table):
         super(IntegerConst, self).__init__(builder, module, symbol_table)
@@ -242,6 +291,9 @@ class IntegerConst(RValue):
 
 
 class RealConst(RValue):
+    '''
+        Real constant. Holds floating point numbers.
+    '''
 
     def __init__(self, value, builder, module, symbol_table):
         super(RealConst, self).__init__(builder, module, symbol_table)
@@ -249,6 +301,9 @@ class RealConst(RValue):
 
 
 class CharConst(RValue):
+    '''
+        Character constant. Contains exactly one literal.
+    '''
 
     def __init__(self, value, builder, module, symbol_table):
         super(CharConst, self).__init__(builder, module, symbol_table)
@@ -257,6 +312,9 @@ class CharConst(RValue):
 
 
 class BoolConst(RValue):
+    '''
+        Boolean constant. Can be true or false.
+    '''
 
     def __init__(self, value, builder, module, symbol_table):
         super(BoolConst, self).__init__(builder, module, symbol_table)
@@ -265,6 +323,10 @@ class BoolConst(RValue):
 
 
 class Ref(RValue):
+    '''
+        Declares a pointer to an LValue. That is if
+        t is integer then ^t is a pointer to an integer
+    '''
 
     def __init__(self, lvalue, builder, module, symbol_table):
         super(Ref, self).__init__(builder, module, symbol_table)
@@ -272,6 +334,9 @@ class Ref(RValue):
 
 
 class Nil(RValue):
+    '''
+        The null pointer. Must be declared as a singleton.
+    '''
 
     def __init__(self, builder, module, symbol_table):
         super(Nil, self).__init__(builder, module, symbol_table)
@@ -279,19 +344,31 @@ class Nil(RValue):
 
 
 class UnOp(RValue):
+    '''
+        Unary operator. +x, -x and not x
+    '''
 
     def __init__(self, op, rhs, builder, module, symbol_table):
         super(UnOp, self).__init__(builder, module, symbol_table)
         self.op = op
         self.rhs = rhs
 
+
 class BinOp(RValue):
+    '''
+        Binary operation between two sides (lhs, rhs)
+        Can be
+            1. Arithmetic
+            2. Logical
+            3. Comparison
+    '''
 
     def __init__(self, op, lhs, rhs, builder, module, symbol_table):
         super(UnOp, self).__init__(builder, module, symbol_table)
         self.op = op
         self.lhs = lhs
         self.rhs = rhs
+
 
 class AddressOf(RValue):
     '''
@@ -305,22 +382,40 @@ class AddressOf(RValue):
         super(AddressOf, self).__init__(builder, module, symbol_table)
         self.lvalue = lvalue
 
+
 class LValue(Expr):
+    '''
+        Base class for the LValue
+    '''
+
     def __init__(self, builder, module, symbol_table):
         super(LValue, self).__init__(builder, module, symbol_table)
 
 
 class NameLValue(LValue):
+    '''
+        Named LValue
+    '''
+
     def __init__(self, id_, builder, module, symbol_table):
         super(NameLValue, self).__init__(builder, module, symbol_table)
         self.id_ = id_
 
 
 class Result(LValue):
+    '''
+        Holds the result of a function
+    '''
+
     def __init__(self, builder, module, symbol_table):
         super(Result, self).__init__(builder, module, symbol_table)
 
+
 class StringLiteral(LValue):
+    '''
+        Holds a node for a string literal
+    '''
+
     def __init__(self, literal, builder, module, symbol_table):
         super(StringLiteral, self).__init__(builder, module, symbol_table)
         self.literal = literal
@@ -338,6 +433,9 @@ class Deref(LValue):
 
 
 class SetExpression(LValue):
+    '''
+        Assignment of an expression to a name
+    '''
     def __init__(self, lvalue, expr, builder, module, symbol_table):
         super(SetExpression, self).__init__(builder, module, symbol_table)
         self.lvalue = lvalue
