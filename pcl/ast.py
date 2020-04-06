@@ -6,7 +6,7 @@ class AST(ABC):
         The Abstract Base Class for the AST Node
     '''
 
-    def __init__(self, builder, module, symbol_table):
+    def __init__(self, builder=None, module=None, symbol_table=None):
         '''
             AST Initializer
             Args:
@@ -110,14 +110,9 @@ class Formal(AST):
 
 
 class Type(AST):
-    T_INTEGER = 'int'
-    T_REAL = 'real'
-    T_BOOL = 'bool'
-    T_CHAR = 'char'
 
     def __init__(self, type_, builder, module, symbol_table):
         super(Type, self).__init__(builder, module, symbol_table)
-        assert(type_ in [T_INTEGER, T_REAL, T_BOOL, T_CHAR])
         self.type_ = type_
 
 
@@ -247,10 +242,10 @@ class BoolConst(RValue):
         self.value = value
 
 
-class RefConst(RValue):
+class Ref(RValue):
 
     def __init__(self, l_value, builder, module, symbol_table):
-        super(RefConst, self).__init__(builder, module, symbol_table)
+        super(Ref, self).__init__(builder, module, symbol_table)
         self.l_value = l_value
 
 
@@ -268,14 +263,13 @@ class UnOp(RValue):
         self.op = op
         self.rhs = rhs
 
-
 class BinOp(RValue):
 
     def __init__(self, op, lhs, rhs, builder, module, symbol_table):
         super(UnOp, self).__init__(builder, module, symbol_table)
         self.op = op
-        self.rhs = rhs
         self.lhs = lhs
+        self.rhs = rhs
 
 
 class LValue(Expr):
