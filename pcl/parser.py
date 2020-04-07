@@ -2,11 +2,11 @@ from sly import Parser
 from collections import deque
 import pprint
 
-from pcl.lexer import PCLLexer
-from pcl.error import PCLParserError
-from pcl.ast import *
-from pcl.symbol_table import SymbolTable
-from pcl.codegen import PCLCodegen
+from lexer import PCLLexer
+from error import PCLParserError
+from ast import *
+from symbol_table import SymbolTable
+from codegen import PCLCodegen
 
 
 class PCLParser(Parser):
@@ -35,7 +35,7 @@ class PCLParser(Parser):
             symbol_table=self.symbol_table)
 
     # Tokens from PCLLexer
-    tokens = PCLLexer.tokens - {COMMENT}
+    tokens = PCLLexer.tokens
 
     # Associativity and priority of operators
     precedence = (
@@ -71,7 +71,7 @@ class PCLParser(Parser):
 
     @_('VAR var_list')
     def local(self, p):
-        return VarList(vars=p.var_list, builder=self.builder,
+        return VarList(vars_=p.var_list, builder=self.builder,
                        module=self.module, symbol_table=self.symbol_table)
 
     @_('LABEL id_list SEMICOLON')
@@ -89,18 +89,18 @@ class PCLParser(Parser):
         return Forward(header=p.header, builder=self.builder,
                        module=self.module, symbol_table=self.symbol_table)
 
-    @_('')
-    def local_list(self, p):
-        return deque([])
-
     @_('local_list local')
     def local_list(self, p):
         p.local_list.append(p.local)
         return p.local_list
 
-    @_('NAME id_list DCOLON type_ SEMICOLON')
+    @_('')
+    def local_list(self, p):
+        return deque([])
+
+    @_('id_list DCOLON vartype SEMICOLON')
     def var(self, p):
-        return Var(ids_=p.id_list, type_=p.type_, builder=self.builder,
+        return Var(ids=p.id_list, type_=p.vartype, builder=self.builder,
                    module=self.module, symbol_table=self.symbol_table)
 
     @_('NAME comma_id_list')
@@ -114,8 +114,8 @@ class PCLParser(Parser):
 
     @_('comma_id_list COMMA NAME')
     def comma_id_list(self, p):
-        p.id_list.append(p.NAME)
-        return p_id_list
+        p.comma_id_list.append(p.NAME)
+        return p.comma_id_list
 
     @_('var')
     def var_list(self, p):
@@ -138,27 +138,27 @@ class PCLParser(Parser):
                       func_type=None, builder=self.builder, module=self.module,
                       symbol_table=self.symbol_table)
 
-    @_('FUNCTION NAME LPAREN formal_list RPAREN DCOLON type_')
+    @_('FUNCTION NAME LPAREN formal_list RPAREN DCOLON vartype')
     def header(self, p):
         return Header(header_type=p[0], id_=p.NAME,
-                      formals=p.formal_list, func_type=p.type_,
+                      formals=p.formal_list, func_type=p.vartype,
                       builder=self.builder, module=self.module,
                       symbol_table=self.symbol_table)
 
-    @_('FUNCTION NAME LPAREN RPAREN DCOLON type_')
+    @_('FUNCTION NAME LPAREN RPAREN DCOLON vartype')
     def header(self, p):
         return Header(header_type=p[0], id_=p.NAME, formals=deque([]),
-                      func_type=p.type_, builder=self.builder,
+                      func_type=p.vartype, builder=self.builder,
                       module=self.module, symbol_table=self.symbol_table)
 
-    @_('id_list DCOLON type_', 'VAR id_list DCOLON type_')
+    @_('id_list DCOLON vartype', 'VAR id_list DCOLON vartype')
     def formal(self, p):
-        return Formal(ids=p.id_list, type_=p.type_, builder=self.builder,
+        return Formal(ids=p.id_list, type_=p.vartype, builder=self.builder,
                       module=self.module, symbol_table=self.symbol_table)
 
     @_('formal semicolon_formal_list')
     def formal_list(self, p):
-        p.semicolon_formal_list.append(formal)
+        p.semicolon_formal_list.append(p.formal)
         return p.semicolon_formal_list
 
     @_('')
@@ -172,24 +172,24 @@ class PCLParser(Parser):
 
     # FROM HERE
     @_('INTEGER', 'REAL', 'BOOLEAN', 'CHAR')
-    def type_(self, p):
+    def vartype(self, p):
         return Type(type_=p[0], builder=self.builder, module=self.module,
                     symbol_table=self.symbol_table)
 
-    @_('ARRAY LSQUARE INT_CONS RSQUARE OF type_')
-    def type_(self, p):
-        return ArrayType(length=p[2], type_=p.type_, builder=self.builder,
+    @_('ARRAY LSQUARE INT_CONS RSQUARE OF vartype')
+    def vartype(self, p):
+        return ArrayType(length=p[2], type_=p.vartype, builder=self.builder,
                          module=self.module, symbol_table=self.symbol_table)
 
-    @_('ARRAY OF type_')
-    def type_(self, p):
+    @_('ARRAY OF vartype')
+    def vartype(self, p):
         # We do not know the length, so we use -1.
-        return ArrayType(length=-1, type_=p.type_, builder=self.builder,
+        return ArrayType(length=-1, type_=p.vartype, builder=self.builder,
                          module=self.module, symbol_table=self.symbol_table)
 
-    @_('EXP type_')
-    def type_(self, p):
-        return PointerType(type_=p.type_, builder=self.builder,
+    @_('EXP vartype')
+    def vartype(self, p):
+        return PointerType(type_=p.vartype, builder=self.builder,
                            module=self.module, symbol_table=self.symbol_table)
 
     @_('BEGIN stmt semicolon_stmt_list END')
@@ -213,6 +213,10 @@ class PCLParser(Parser):
             builder=self.builder,
             module=self.module,
             symbol_table=self.symbol_table)
+
+    @_('block')
+    def stmt(self, p):
+        return p.block
 
     @_('lvalue SET expr')
     def stmt(self, p):
@@ -238,6 +242,7 @@ class PCLParser(Parser):
         return Dispose(lvalue=p.lvalue, builder=self.builder,
                        module=self.module, symbol_table=self.symbol_table)
 
+
     @_('RETURN')
     def stmt(self, p):
         return Return(
@@ -252,14 +257,8 @@ class PCLParser(Parser):
 
     @_('WHILE expr DO stmt')
     def stmt(self, p):
-        return While(expr=p.expr, stmt=p.stms, builder=self.builder,
+        return While(expr=p.expr, stmt=p.stmt, builder=self.builder,
                      module=self.module, symbol_table=self.symbol_table)
-
-
-    @_('NAME DCOLON stmt')
-    def stmt(self, p):
-        return Statement(name=p.NAME, builder=self.builder, module=self.module,
-                         symbol_table=self.symbol_table)
 
 
     @_('IF expr THEN stmt %prec SINGLE_IF')
@@ -273,6 +272,13 @@ class PCLParser(Parser):
         return If(expr=p.expr, stmt=p[3], else_stmt=p[5],
                   builder=self.builder, module=self.module,
                   symbol_table=self.symbol_table)
+
+
+    @_('NAME DCOLON stmt')
+    def stmt(self, p):
+        return Statement(name=p.NAME, builder=self.builder, module=self.module,
+                         symbol_table=self.symbol_table)
+
 
     @_('call')
     def stmt(self, p):
@@ -373,14 +379,14 @@ class PCLParser(Parser):
        'expr MINUS expr',
        'expr TIMES expr',
        'expr FRAC expr',
-       'expr GT expr',
-       'expr LT expr',
-       'expr GTE expr',
-       'expr LTE expr',
        'expr DIV expr',
        'expr MOD expr',
-       'expr OR expr',
+       'expr GTE expr',
+       'expr LTE expr',
+       'expr GT expr',
+       'expr LT expr',
        'expr AND expr',
+       'expr OR expr',
        'expr EQUAL expr',
        'expr NEG expr',
        )
@@ -417,6 +423,10 @@ class PCLParser(Parser):
             module=self.module,
             symbol_table=self.symbol_table)
 
+    @_('call')
+    def expr(self, p):
+        return p.call
+
     @_('')
     def comma_expr_list(self, p):
         return deque([])
@@ -432,15 +442,41 @@ class PCLParser(Parser):
 
 
 if __name__ == '__main__':
-    s = '''
-        program hello;
-        begin
-            writeString("hello");
-            x := 2;
-        end.
-        '''
     lexer = PCLLexer()
     parser = PCLParser()
-    program = parser.parse(lexer.tokenize(s))
 
+    s = '''
+    program reverse;
+        function strlen (var s : array of char) : integer;
+        begin
+            result := 0;
+            while s[result] <> "\0" do result := result + 1
+        end;
+
+        var r : array [32] of char;
+        procedure reverse (var s : array of char);
+        var i, l : integer;
+        begin
+            l := strlen(s);
+            i := 0;
+            while i < l do
+                begin
+                    r[i] := s[l-i-1];
+                    i := i+1
+                end;
+            r[i] := "\0"
+        end;
+
+        begin
+            reverse("\n!dlrow olleH");
+            writeString(r)
+        end.
+
+    '''
+
+    tokens = list(lexer.tokenize(s))
+    print([x.value for x in tokens])
+
+    # tokens = lexer.tokenize(s)
+    program = parser.parse(iter(tokens))
     program.pprint()
