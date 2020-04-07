@@ -63,7 +63,10 @@ class AST(ABC):
                 elif isinstance(v, deque):
                     for x in v:
                         print((indent - 1) * ' ', end='')
-                        x.pprint(indent + 1)
+                        if isinstance(x, AST):
+                            x.pprint(indent + 1)
+                        else:
+                            print((indent + 1) * ' ' + x)
                 else:
                     print((indent + 2) * ' ', end='')
                     print('{} : {}'.format(k, v))
@@ -145,7 +148,7 @@ class Header(AST):
 class Formal(AST):
 
     def __init__(self, ids, type_, builder, module, symbol_table):
-        super(Formal, AST).__init__(builder, module, symbol_table)
+        super(Formal, self).__init__(builder, module, symbol_table)
         self.ids = ids
         self.type_ = type_
 
@@ -318,7 +321,6 @@ class BoolConst(RValue):
 
     def __init__(self, value, builder, module, symbol_table):
         super(BoolConst, self).__init__(builder, module, symbol_table)
-        assert(value in [True, False])
         self.value = value
 
 
@@ -364,7 +366,7 @@ class BinOp(RValue):
     '''
 
     def __init__(self, op, lhs, rhs, builder, module, symbol_table):
-        super(UnOp, self).__init__(builder, module, symbol_table)
+        super(BinOp, self).__init__(builder, module, symbol_table)
         self.op = op
         self.lhs = lhs
         self.rhs = rhs
