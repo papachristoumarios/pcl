@@ -1,5 +1,5 @@
 from sly import Lexer
-from pcl.error import PCLLexerError
+from error import PCLLexerError
 import re
 
 def regex(s):
@@ -69,11 +69,13 @@ class PCLLexer(Lexer):
         REAL_CONS,
         CHARACTER,
         NAME,
-        COMMENT,
         STRING,
         NEWLINE
 
     }
+
+    ignore_comment = r'(?s)\(\*.*?\*\)'
+    ignore = ' \t\r'
 
     # keywords
     AND = regex('and')
@@ -117,15 +119,15 @@ class PCLLexer(Lexer):
     MINUS = regex('-')
     TIMES = regex('*')
     FRAC = regex('/')
-    GT = regex('>')
-    LT = regex('<')
+    NEG = regex('<>')
     GTE = regex('>=')
     LTE = regex('<=')
+    GT = regex('>')
+    LT = regex('<')
     LSQUARE = regex('[')
     RSQUARE = regex(']')
     EXP = regex('^')
     ADDRESSOF = regex('@')
-    NEG = regex('<>')
 
     # Separators
     SET = regex(':=')
@@ -141,12 +143,10 @@ class PCLLexer(Lexer):
     CHARACTER = "'" + ".|" + "'"
     STRING = r"\"[^\"]*\""
 
-    COMMENT = r'(?s)\(\*.*?\*\)'
-    ignore = r'[\s, \t, \r]+'
     ignore_newline = '\n+'
 
     # "Special" functions:
-    def COMMENT(self, t):
+    def ignore_comment(self, t):
         self.lineno += t.value.count('\n')
 
     def ignore_newline(self, t):
@@ -161,20 +161,7 @@ if __name__ == '__main__':
     lexer = PCLLexer()
     s = '''
         program collatz;
-
-        label x, y;
-        forward procedure hello();
-        var x : integer;
-
-        begin
-          x := 6;
-          while x > 1 do
-          begin
-            writeInteger(x);
-            if x mod 2 = 0 then x := x div 2
-            else x := 3 * x + 1;
-          end;
-
+            var x, y : integer;
         end.
         '''
     token_names = [x.value for x in lexer.tokenize(s)]
