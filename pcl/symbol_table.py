@@ -1,7 +1,6 @@
 from enum import Enum
 from collections import deque
-
-from pcl.error import PCLSymbolTableError
+from error import PCLSymbolTableError
 
 class BasicType(Enum):
     T_INT = 'int'
