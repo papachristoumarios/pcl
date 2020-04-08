@@ -74,10 +74,13 @@ class PCLLexer(Lexer):
 
     }
 
+    # Ignore multiline comments
     ignore_comment = r'(?s)\(\*.*?\*\)'
+
+    # This must be a string and not [\s, \t, \r ] according to SLY docs
     ignore = ' \t\r'
 
-    # keywords
+    # Keywords
     AND = regex('and')
     DO = regex('do')
     IF = regex('if')
@@ -143,9 +146,10 @@ class PCLLexer(Lexer):
     CHARACTER = "'" + ".|" + "'"
     STRING = r"\"[^\"]*\""
 
+    # Ignore newlines
     ignore_newline = '\n+'
 
-    # "Special" functions:
+    # Increase line counts upon newlines and comments
     def ignore_comment(self, t):
         self.lineno += t.value.count('\n')
 

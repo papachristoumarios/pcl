@@ -1,8 +1,9 @@
 from enum import Enum
+from itertools import product
 from collections import deque
 from error import PCLSymbolTableError
 
-class BasicType(Enum):
+class BaseType(Enum):
     T_INT = 'int'
     T_BOOL = 'boolean'
     T_REAL = 'real'
@@ -14,16 +15,9 @@ class Composer(Enum):
     T_VAR_ARRAY = 'var_array'
     T_PTR = 'ptr'
 
-class SType:
 
-    def __init__(self, basic_type, composer=Composer.T_NO_COMP):
-        if not isinstance(basic_type, BasicType) or not isinstance(composer, Composer):
-            raise PCLSymbolTableError('Invalid type')
-        self.basic_type = basic_type
-        self.composer = composer
+CompositeType = Enum('CompositeType', product([1, 2], [3, 4]))
 
-    def __eq__(self, other):
-        return self.basic_type == other.basic_type and self.composer == other.composer
 
 class SymbolEntry:
 
@@ -86,3 +80,5 @@ class SymbolTable:
             raise PCLSymbolTableError('Scopes do not exist')
 
         self.scopes[-1].insert(c, t)
+
+if __name__ == '__main__':
