@@ -36,4 +36,3 @@ def test_collatz():
 
     end.
     '''
-    assert 1 == 0
