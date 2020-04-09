@@ -23,6 +23,10 @@ class ComposerType(Enum):
 def is_composite(stype):
     return stype[0] != ComposerType.T_VAR_ARRAY
 
+arithmetic_types = [(ComposerType.T_NO_COMP, BasicType.T_INT),
+                         (ComposerType.T_NO_COMP, BasicType.T_REAL)]
+    
+
 class MetaType:
     T_COMPLETE = 'complete'
     T_INCOMPLETE = 'incomplete'

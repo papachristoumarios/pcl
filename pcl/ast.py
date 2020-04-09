@@ -397,18 +397,17 @@ class Dispose(Statement):
         Dispose statement.
     '''
 
-    def __init__(self, lvalue, builder, module, symbol_table):
+    def __init__(self, lvalue, brackets, builder, module, symbol_table):
         super(Dispose, self).__init__(builder, module, symbol_table)
         self.lvalue = lvalue
+        self.brackets = brackets
 
     def sem(self):
         self.lvalue.sem()
 
-        if self.expr:
+        if self.brackets:
             if self.lvalue.stype[0] != ComposerType.T_PTR or self.lvalue.stype[1] != ComposerType.T_VAR_ARRAY:
                 raise PCLSemError('Cannot dispose instance of {}'.format(self.lvalue.stype))
-            self.expr.sem()
-            self.expr.type_check((ComposerType.T_NO_COMP, ComposerType.T_INT))
         else:
             if self.lvalue.stype[0] != ComposerType.T_PTR or not is_composite(self.lvalue.stype[1]):
                 raise PCLSemError('Cannot dispose instance of {}'.format(self.lvalue.stype))
@@ -509,15 +508,35 @@ class Nil(RValue):
         self.stype = (CompositeType.T_NO_COMP, BaseType.T_NIL)
 
 
-class UnOp(RValue):
+class ArUnOp(RValue):
     '''
-        Unary operator. +x, -x and not x
+        Unary operator. +x, -x
     '''
 
     def __init__(self, op, rhs, builder, module, symbol_table):
-        super(UnOp, self).__init__(builder, module, symbol_table)
+        super(ArUnOp, self).__init__(builder, module, symbol_table)
         self.op = op
         self.rhs = rhs
+
+    def sem(self):
+        self.rhs.sem()
+        self.rhs.type_check(arithmetic_types)
+        self.stype = self.rhs.stype
+
+class LogicUnOp(RValue):
+    '''
+        Unary operator. +x, -x
+    '''
+
+    def __init__(self, op, rhs, builder, module, symbol_table):
+        super(LogicUnOp, self).__init__(builder, module, symbol_table)
+        self.op = op
+        self.rhs = rhs
+
+    def sem(self):
+        self.rhs.sem()
+        self.rhs.type_check((ComposerType.T_NO_COMP, BaseType.T_BOOL))
+        self.stype = self.rhs.stype
 
 
 class ArOp(RValue):
@@ -530,15 +549,13 @@ class ArOp(RValue):
         self.op = op
         self.lhs = lhs
         self.rhs = rhs
-        self.arithmetic_types = [(ComposerType.T_NO_COMP, BasicType.T_INT),
-                                 (ComposerType.T_NO_COMP, BasicType.T_REAL)]
 
     def sem(self):
         self.lhs.sem()
         self.rhs.sem()
 
-        type_check(self.lhs.stype, self.arithmetic_types)
-        type_check(self.rhs.stype, self.arithmetic_types)
+        self.lhs.type_check(arithmetic_types)
+        self.rhs.type_check(arithmetic_types)
 
         real_type = (ComposerType.T_NO_COMP, BasicType.T_REAL)
         int_type = (ComposerType.T_NO_COMP, BasicType.T_INT)
@@ -548,8 +565,8 @@ class ArOp(RValue):
             return
 
         if self.op == 'div' or self.op == 'mod':
-            type_check(self.lhs.stype, int_type)
-            type_check(self.rhs.stype, int_type)
+            self.lhs.type_check(int_type)
+            self.rhs.type_check(int_type)
 
         if self.lhs.stype == real_type or self.rhs.stype == real_type:
             self.stype = real_type
@@ -568,21 +585,19 @@ class CompOp(RValue):
         self.op = op
         self.lhs = lhs
         self.rhs = rhs
-        self.arithmetic_types = [(ComposerType.T_NO_COMP, BasicType.T_INT),
-                                 (ComposerType.T_NO_COMP, BasicType.T_REAL)]
 
     def sem(self):
         self.lhs.sem()
         self.rhs.sem()
 
         if self.op == '=' or self.op == '<>':
-            arithmetic = (self.lhs.stype in self.arithmetic_types) and (self.rhs.stype in self.arithmetic_types)
+            arithmetic = (self.lhs.stype in arithmetic_types) and (self.rhs.stype in arithmetic_types)
             if not_arithmetic:
                 assert self.lhs.stype == self.rhs.stype, 'Comparison is only allowed between operands of same type'
                 assert self.lhs.stype[0] != ComposerType.T_CONST_ARRAY and self.lhs.stype[0] != ComposerType.T_VAR_ARRAY, 'Arrays cannot be compared.'
         else:
-            type_check(self.lhs.stype, self.arithmetic_types)
-            type_check(self.rhs.stype, self.arithmetic_types)
+            self.lhs.type_check(arithmetic_types)
+            self.rhs.type_check(arithmetic_types)
 
         self.stype = (ComposerType.T_NO_COMP, BasicType.T_BOOL)
 
@@ -603,8 +618,8 @@ class LogicOp(RValue):
         self.rhs.sem()
         bool_type = (ComposerType.T_NO_COMP, BasicType.T_BOOL)
 
-        type_check(self.lhs.stype, bool_type)
-        type_check(self.rhs.stype, bool_type)
+        self.lhs.type_check(bool_type)
+        self.rhs.type_check(bool_type)
 
         self.stype = bool_type
 

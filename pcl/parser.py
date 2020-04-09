@@ -25,8 +25,8 @@ class PCLParser(Parser):
                 printf: LLVM printf function
         '''
         self.arithmetic = ['+', '-', '*', '/', 'div', 'mod']
-        self.comp = ['>=', '<=', '>', '<']
-        self.logical = ['and', 'or', '=', '<>']
+        self.comp = ['>=', '<=', '>', '<', '=', '<>']
+        self.logical = ['and', 'or', 'not']
         self.codegen = PCLCodegen()
         self.symbol_table = SymbolTable()
         self.builder = self.codegen.builder
@@ -240,9 +240,14 @@ class PCLParser(Parser):
         return New(expr=p.expr, lvalue=p.lvalue, builder=self.builder,
                    module=self.module, symbol_table=self.symbol_table)
 
-    @_('DISPOSE LSQUARE RSQUARE lvalue', 'DISPOSE lvalue')
+    @_('DISPOSE lvalue')
     def stmt(self, p):
-        return Dispose(lvalue=p.lvalue, builder=self.builder,
+        return Dispose(lvalue=p.lvalue, brackets=False, builder=self.builder,
+                       module=self.module, symbol_table=self.symbol_table)
+
+    @_('DISPOSE LSQUARE RSQUARE lvalue')
+    def stmt(self, p):
+        return Dispose(lvalue=p.lvalue, brackets=True, builder=self.builder,
                        module=self.module, symbol_table=self.symbol_table)
 
 
@@ -371,12 +376,20 @@ class PCLParser(Parser):
     # UNARY OPERATORS
     @_('unop expr %prec UN_OP')
     def rvalue(self, p):
-        return UnOp(
-            op=p.unop,
-            rhs=p.expr,
-            builder=self.builder,
-            module=self.module,
-            symbol_table=self.symbol_table)
+        if p.unop.value in self.arithmetic:
+            return ArUnOp(
+                op=p.unop,
+                rhs=p.expr,
+                builder=self.builder,
+                module=self.module,
+                symbol_table=self.symbol_table)
+        else:
+            return LogicUnOp(
+                op=p.unop,
+                rhs=p.expr,
+                builder=self.builder,
+                module=self.module,
+                symbol_table=self.symbol_table)
 
     @_('expr PLUS expr',
        'expr MINUS expr',
