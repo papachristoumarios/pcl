@@ -249,6 +249,14 @@ class ArrayType(Type):
         super(ArrayType, self).__init__(type_, builder, module, symbol_table)
         self.length = int(length)
 
+    def sem(self):
+        if self.length > 0:
+            self.stype = (ComposerType.T_CONST_ARRAY, self.type_.stype)
+        elif self.length == 0:
+            self.stype = (ComposerType.T_VAR_ARRAY, self.type_.stype)
+        else:
+            raise PCLSemError('Negative length')
+
 
 class Statement(AST):
 
@@ -718,7 +726,7 @@ class Deref(LValue):
         if self.expr.stype[0] != ComposerType.T_PTR:
             raise PCLSemError('Dereferencing non-pointer expression')
         elif self.expr.stype[1] == BaseType.T_NIL:
-            raise PCLSemError('Cannot dereference nil')    
+            raise PCLSemError('Cannot dereference nil')
 
         self.stype = self.expr.stype[1]
 

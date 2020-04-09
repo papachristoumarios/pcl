@@ -186,8 +186,7 @@ class PCLParser(Parser):
 
     @_('ARRAY OF vartype')
     def vartype(self, p):
-        # We do not know the length, so we use -1.
-        return ArrayType(length=-1, type_=p.vartype, builder=self.builder,
+        return ArrayType(length=0, type_=p.vartype, builder=self.builder,
                          module=self.module, symbol_table=self.symbol_table)
 
     @_('EXP vartype')
