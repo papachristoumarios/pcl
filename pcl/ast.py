@@ -430,6 +430,12 @@ class RValue(Expr):
     def __init__(self, builder, module, symbol_table):
         super(RValue, self).__init__(builder, module, symbol_table)
 
+    def type_check(self, target, *args):
+        if self.stype[1] == BaseType.T_NIL or target.stype == BaseType.T_NIL:
+            return True
+        else:
+            super(RValue, self).type_check(target, *args)
+
 
 class IntegerConst(RValue):
     '''
@@ -494,6 +500,10 @@ class Ref(RValue):
         super(Ref, self).__init__(builder, module, symbol_table)
         self.lvalue = lvalue
 
+    def sem(self):
+        self.lvalue.sem()
+        self.stype = (ComposerType.T_PTR, self.lvalue.stype)
+
 
 class Nil(RValue):
     '''
@@ -502,7 +512,6 @@ class Nil(RValue):
 
     def __init__(self, builder, module, symbol_table):
         super(Nil, self).__init__(builder, module, symbol_table)
-        self.value = None
 
     def sem(self):
         self.stype = (CompositeType.T_NO_COMP, BaseType.T_NIL)
@@ -708,6 +717,8 @@ class Deref(LValue):
         self.expr.sem()
         if self.expr.stype[0] != ComposerType.T_PTR:
             raise PCLSemError('Dereferencing non-pointer expression')
+        elif self.expr.stype[1] == BaseType.T_NIL:
+            raise PCLSemError('Cannot dereference nil')    
 
         self.stype = self.expr.stype[1]
 

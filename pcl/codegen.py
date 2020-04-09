@@ -1,7 +1,21 @@
 from ctypes import CFUNCTYPE, c_double
 from llvmlite import ir, binding
 from error import PCLCodegenError
+from enum import Enum
 import os
+
+class TypeSize(Enum):
+    T_BOOL = 1
+    T_CHAR = 1
+    T_REAL = 10
+    T_PTR = 2
+    T_INT = 8
+
+    @staticmethod
+    def get_const_array_size(n, t):
+        if n <= 0:
+            raise PCLCodegenError('Allocating array with non-positive number of elements')
+        return n * t.value
 
 
 class PCLCodegen:
