@@ -183,6 +183,10 @@ class Statement(AST):
         super(Statement, self).__init__(builder, module, symbol_table)
         self.name = kwargs.get('name', None)
 
+    def sem(self):
+        if self.name:
+            self.symbol_table.insert
+
 
 class Block(Statement):
 
@@ -210,6 +214,14 @@ class If(Statement):
         self.stmt = stmt
         self.else_stmt = else_stmt
 
+    def sem(self):
+        self.expr.sem()
+        self.expr.type_check((CompositeType.T_NO_COMP, BaseType.T_BOOL))
+
+        self.stmt.sem()
+        if self.else_stmt:
+            self.else_stmt.sem()
+
 
 class While(Statement):
     '''
@@ -221,6 +233,12 @@ class While(Statement):
         self.expr = expr
         self.stmt = stmt
 
+    def sem(self):
+        self.expr.sem()
+        self.expr.type_check((CompositeType.T_NO_COMP, BaseType.T_BOOL))
+
+        self.stmt.sem()
+
 
 class Goto(Statement):
     '''
@@ -231,19 +249,24 @@ class Goto(Statement):
         super(Goto, self).__init__(builder, module, symbol_table)
         self.id_ = id_
 
+    def sem(self):
+        self.symbol_table.lookup(self.id_, last_scope=True)
+
 
 class Return(Statement):
     '''
         Return statement.
     '''
-    pass
+    def sem(self):
+        pass
 
 
 class Empty(Statement):
     '''
         Empty Statement.
     '''
-    pass
+    def sem(self):
+        pass
 
 
 class New(Statement):
@@ -255,6 +278,7 @@ class New(Statement):
         super(New, self).__init__(builder, module, symbol_table)
         self.expr = expr
         self.lvalue = lvalue
+
 
 
 class Dispose(Statement):
