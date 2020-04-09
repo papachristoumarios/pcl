@@ -20,6 +20,8 @@ class ComposerType(Enum):
     T_VAR_ARRAY = 'T_VAR_ARRAY'
     T_PTR = 'T_PTR'
 
+def is_composite(stype):
+    return stype[0] != ComposerType.T_VAR_ARRAY
 
 class MetaType:
     T_COMPLETE = 'complete'
@@ -63,7 +65,14 @@ class Scope:
 class SymbolTable:
     def __init__(self):
         self.scopes = deque([])
+
+        # OPTIMIZE keep one copy
+
+        # O(1) Lookup and Insert
         self.formals = defaultdict(dict)
+
+        # Linear checking
+        self.formals_list = defaultdict(deque)
 
     def open_scope(self):
         if len(self.scopes) == 0:
@@ -104,9 +113,11 @@ class SymbolTable:
 
     def insert_formal(self, header, formal, t):
         if not self.formals[header].get(formal, None):
-            raise PCLSymbolTableError('Duplicate formal {} in header {}'.format(formal_name, header))
+            raise PCLSymbolTableError('Duplicate formal {} in header {}'.format(formal, header))
 
-        self.formals[header][formal_name] = t
+        self.formals[header][formal] = t
+
+        self.formals_list[header].append((formal, t))
 
     def lookup_formal(self, header, formal):
         result = self.formals[header].get(formal, None)
@@ -114,7 +125,11 @@ class SymbolTable:
         if result:
             return result
         else:
-            raise PCLSymbolTableError('Unknown formal {} in header {}'.format(formal_name, header))
+            raise PCLSymbolTableError('Unknown formal {} in header {}'.format(formal, header))
+
+    def formal_generator(self, header):
+        for elem in self.formals_list[header]:
+            yield elem
 
 
 if __name__ == '__main__':

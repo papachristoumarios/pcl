@@ -29,7 +29,7 @@ class AST(ABC):
         raise NotImplementedError('sem method not implemented for this node')
 
 
-    def type_check(self, target):
+    def type_check(self, target, *args):
         '''
             Checks if the inferred type of the node equals the
             desired type target. target can be a type or a list of types.
@@ -43,8 +43,8 @@ class AST(ABC):
         if self.stype == target:
             return True
 
-        msg = '{}: Expected type {}, got type {}'.format(
-            self.__class__.__name__, target, self.stype)
+        msg = '{}: Expected type {}, got type {}. {}'.format(
+            self.__class__.__name__, target, self.stype, ' '.join(args))
         raise PCLSemError(msg)
 
 
@@ -258,7 +258,7 @@ class Statement(AST):
 
     def sem(self):
         if self.name:
-            self.symbol_table.insert
+            self.symbol_table.lookup(self.name)
 
 
 class Block(Statement):
@@ -267,6 +267,10 @@ class Block(Statement):
         super(Block, self).__init__(builder, module, symbol_table)
         self.stmt_list = stmt_list
 
+    def sem(self):
+        for stmt in self.stmt_list:
+            stmt.sem()
+
 
 class Call(AST):
 
@@ -274,6 +278,23 @@ class Call(AST):
         super(Call, self).__init__(builder, module, symbol_table)
         self.id_ = id_
         self.exprs = exprs
+
+    def sem(self):
+        try:
+            # Search original symbol table (non-recursive)
+            call_entry = self.symbol_table.lookup(self.id_)
+            formals = self.symbol_table.formal_generator(self.id_)
+        except PCLSymbolTableError:
+            # Original name not found, try with forward_
+            call_entry = self.symbol_table.lookup('forward_' + self.id_)
+            formals = self.symbol_table.formal_generator('forward_' + self.id_)
+
+        self.stype = call_entry.stype
+
+        # Check arguments
+        for expr, (formal_name, formal) in zip(self.exprs, formals):
+            expr.sem()
+            expr.type_check(formal.stype, 'Formal name: {}'.format(formal_name))
 
 
 class If(Statement):
@@ -309,7 +330,6 @@ class While(Statement):
     def sem(self):
         self.expr.sem()
         self.expr.type_check((CompositeType.T_NO_COMP, BaseType.T_BOOL))
-
         self.stmt.sem()
 
 
@@ -352,6 +372,24 @@ class New(Statement):
         self.expr = expr
         self.lvalue = lvalue
 
+    def sem(self):
+        self.lvalue.sem()
+        if self.expr:
+            if self.lvalue.stype[0] != ComposerType.T_PTR or self.lvalue.stype[1] != ComposerType.T_VAR_ARRAY:
+                raise PCLSemError('Cannot create new instance of {}'.format(self.lvalue.stype))
+
+            self.expr.sem()
+            self.expr.type_check((ComposerType.T_NO_COMP, ComposerType.T_INT))
+
+            # ^array of t -> array [n] of t
+            self.stype = (ComposerType.T_CONST_ARRAY, self.lvalue.stype[1][1][1])
+
+        else:
+            if self.lvalue.stype[0] != ComposerType.T_PTR or not is_composite(self.lvalue.stype[1]):
+                raise PCLSemError('Cannot create new instance of {}'.format(self.lvalue.stype))
+
+            # ^t -> t
+            self.stype = self.lvalue.stype[1]
 
 
 class Dispose(Statement):
@@ -362,6 +400,20 @@ class Dispose(Statement):
     def __init__(self, lvalue, builder, module, symbol_table):
         super(Dispose, self).__init__(builder, module, symbol_table)
         self.lvalue = lvalue
+
+    def sem(self):
+        self.lvalue.sem()
+
+        if self.expr:
+            if self.lvalue.stype[0] != ComposerType.T_PTR or self.lvalue.stype[1] != ComposerType.T_VAR_ARRAY:
+                raise PCLSemError('Cannot dispose instance of {}'.format(self.lvalue.stype))
+            self.expr.sem()
+            self.expr.type_check((ComposerType.T_NO_COMP, ComposerType.T_INT))
+        else:
+            if self.lvalue.stype[0] != ComposerType.T_PTR or not is_composite(self.lvalue.stype[1]):
+                raise PCLSemError('Cannot dispose instance of {}'.format(self.lvalue.stype))
+
+        self.stype = (ComposerType.T_NO_COMP, BaseType.T_NIL)
 
 
 class Expr(AST):
@@ -657,7 +709,17 @@ class SetExpression(LValue):
 
     def sem(self):
         self.expr.sem()
-        self.stype = self.expr.stype
+        self.lvalue.sem()
+
+        if self.expr.stype == self.lvalue.stype and is_composite(self.expr.stype):
+            return
+        elif self.lvalue.stype[1] == BaseType.T_REAL and self.expr.stype[1] == BaseType.T_INT:
+            return
+        elif self.lvalue.stype[0] == ComposerType.T_VAR_ARRAY and self.expr.stype[0] == ComposerType.T_CONST_ARRAY:
+            return
+        else:
+            raise PCLSemError('Invalid set expression {} := {}'.format(self.lvalue.stype, self.expr.stype))
+
 
 
 class LBrack(LValue):
