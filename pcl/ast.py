@@ -2,13 +2,12 @@ import json
 from abc import ABC, abstractmethod
 from collections import deque
 from error import PCLParserError, PCLSemError, PCLCodegenError
-
+from symbol_table import *
 
 class AST(ABC):
     '''
         The Abstract Base Class for the AST Node
     '''
-
     def __init__(self, builder, module, symbol_table):
         '''
             AST Initializer
@@ -27,21 +26,27 @@ class AST(ABC):
         pass
 
     def sem(self):
-        pass
+        raise NotImplementedError('sem method not implemented for this node')
+
 
     def type_check(self, target):
         '''
             Checks if the inferred type of the node equals the
-            desired type target
+            desired type target. target can be a type or a list of types.
             Args:
-                type: The desired type
+                type: type or list of types.
         '''
+        assert self.stype is not None, 'Type check error, type not set.'
+        if isinstance(target, list) and self.stype in target:
+            return True
+
         if self.stype == target:
             return True
-        else:
-            msg = '{}: Expected type {}, got type {}'.format(
-                self.__class__.__name__, target, self.stype)
-            raise PCLSemError(msg)
+
+        msg = '{}: Expected type {}, got type {}'.format(
+            self.__class__.__name__, target, self.stype)
+        raise PCLSemError(msg)
+
 
     def codegen(self):
         pass
@@ -78,6 +83,16 @@ class Program(AST):
         self.id_ = id_
         self.body = body
 
+    def sem(self):
+        # Open program scope
+        self.symbol_table.open_scope()
+
+        # Run sem on body
+        self.body.sem()
+
+        # Close main scope
+        self.symbol_table.close_scope()
+
 
 class Body(AST):
 
@@ -86,11 +101,17 @@ class Body(AST):
         self.locals = locals_
         self.block = block
 
+    def sem(self):
+        # Run semantic to locals
+        for local in self.locals_:
+            local.sem()
+
+        # Run sem to block
+        self.block.sem()
 
 class Local(AST):
     def __init__(self, builder, module, symbol_table):
         super(Local, self).__init__(builder, module, symbol_table)
-
 
 class LocalHeader(Local):
     def __init__(self, header, body, builder, module, symbol_table):
@@ -98,12 +119,23 @@ class LocalHeader(Local):
         self.header = header
         self.body = body
 
+    def sem(self):
+        # Register function or procedure
+        header_entry_type = (ComposerType.T_NO_COMP, BaseType(self.header.header_type))
+        header_entry = SymbolEntry(stype=self.header.type_.stype, name_type=header_entry_type)
+        self.symbol_table.insert(self.id_, header_entry)
 
-class Var(Local):
-    def __init__(self, ids, type_, builder, module, symbol_table):
-        super(Var, self).__init__(builder, module, symbol_table)
-        self.ids = ids
-        self.type_ = type_
+        # Open function scope
+        self.symbol_table.open_scope()
+
+        # Register header locals
+        self.header.sem()
+
+        # Sem the body
+        self.body.sem()
+
+        # Close function scope
+        self.symbol_table.close_scope()
 
 
 class VarList(Local):
@@ -112,12 +144,33 @@ class VarList(Local):
         super(VarList, self).__init__(builder, module, symbol_table)
         self.vars_ = vars_
 
+    def sem(self):
+        for var in self.vars_:
+            var.sem()
+
+class Var(Local):
+    def __init__(self, ids, type_, builder, module, symbol_table):
+        super(Var, self).__init__(builder, module, symbol_table)
+        self.ids = ids
+        self.type_ = type_
+
+    def sem(self):
+        # Iterate over all names and register variables
+        for id_ in self.ids:
+            var_entry = SymbolEntry(stype=self.type_.stype, name_type=NameType.N_VAR)
+            self.symbol_table.insert(id_, var_entry)
 
 class Label(Local):
 
     def __init__(self, ids, builder, module, symbol_table):
         super(Label, self).__init__(builder, module, symbol_table)
         self.ids = ids
+
+    def sem(self):
+        # Iterate over all names and register variables
+        for id_ in self.ids:
+            label_entry = SymbolEntry(stype=self.type_.stype, name_type=NameType.N_LABEL)
+            self.symbol_table.insert(id_, label_entry)
 
 
 class Forward(Local):
@@ -126,9 +179,12 @@ class Forward(Local):
         super(Forward, self).__init__(builder, module, symbol_table)
         self.header = header
 
+    def sem(self):
+        forward_entry = SymbolEntry(stype=self.header.type_.stype, name_type=NameType.N_FORWARD)
+        self.symbol_table.insert('forward_' + self.header.id_, forward_entry)
+
 
 class Header(AST):
-
     def __init__(
             self,
             header_type,
@@ -144,6 +200,15 @@ class Header(AST):
         self.formals = formals
         self.func_type = func_type
 
+    def sem(self):
+        if self.func_type:
+            result_entry = SymbolEntry(stype=self.func_type.stype, name_type=NameType.N_VAR)
+            self.symbol_table.insert('result', result_entry)
+
+        for formal in self.formals:
+            for formal_id in formal.ids:
+                formal_entry = SymbolEntry(stype=formal.stype, name_type=NameType.N_FORMAL)
+                self.symbol_table.insert_formal(self.id_, formal_id, formal_entry)
 
 class Formal(AST):
 
@@ -151,6 +216,9 @@ class Formal(AST):
         super(Formal, self).__init__(builder, module, symbol_table)
         self.ids = ids
         self.type_ = type_
+
+    def sem(self):
+        self.stype = self.type_.stype
 
 
 class Type(AST):
@@ -168,6 +236,11 @@ class PointerType(Type):
 
     def __init__(self, type_, builder, module, symbol_table):
         super(PointerType, self).__init__(type_, builder, module, symbol_table)
+        self.type_ = type_
+
+    def sem(self):
+        base_type = self.type_.stype
+        self.stype = (ComposerType.T_PTR, base_type)
 
 
 class ArrayType(Type):
@@ -316,6 +389,9 @@ class IntegerConst(RValue):
         super(IntegerConst, self).__init__(builder, module, symbol_table)
         self.value = int(value)
 
+    def sem(self):
+        self.stype = (ComposerType.T_NO_COMP, BaseType.T_INT)
+
 
 class RealConst(RValue):
     '''
@@ -325,6 +401,9 @@ class RealConst(RValue):
     def __init__(self, value, builder, module, symbol_table):
         super(RealConst, self).__init__(builder, module, symbol_table)
         self.value = float(value)
+
+    def sem(self):
+        self.stype = (ComposerType.T_NO_COMP, BaseType.T_REAL)
 
 
 class CharConst(RValue):
@@ -337,6 +416,9 @@ class CharConst(RValue):
         assert(len(value) == 1)
         self.value = value
 
+    def sem(self):
+        self.stype = (ComposerType.T_NO_COMP, BaseType.T_CHAR)
+
 
 class BoolConst(RValue):
     '''
@@ -346,6 +428,9 @@ class BoolConst(RValue):
     def __init__(self, value, builder, module, symbol_table):
         super(BoolConst, self).__init__(builder, module, symbol_table)
         self.value = value
+
+    def sem(self):
+        self.stype = (CompositeType.T_NO_COMP, BaseType.T_BOOL)
 
 
 class Ref(RValue):
@@ -368,6 +453,9 @@ class Nil(RValue):
         super(Nil, self).__init__(builder, module, symbol_table)
         self.value = None
 
+    def sem(self):
+        self.stype = (CompositeType.T_NO_COMP, BaseType.T_NIL)
+
 
 class UnOp(RValue):
     '''
@@ -380,20 +468,94 @@ class UnOp(RValue):
         self.rhs = rhs
 
 
-class BinOp(RValue):
+class ArOp(RValue):
     '''
-        Binary operation between two sides (lhs, rhs)
-        Can be
-            1. Arithmetic
-            2. Logical
-            3. Comparison
+        Arithmetic operation between two sides (lhs, rhs)
     '''
 
     def __init__(self, op, lhs, rhs, builder, module, symbol_table):
-        super(BinOp, self).__init__(builder, module, symbol_table)
+        super(ArOp, self).__init__(builder, module, symbol_table)
         self.op = op
         self.lhs = lhs
         self.rhs = rhs
+        self.arithmetic_types = [(ComposerType.T_NO_COMP, BasicType.T_INT),
+                                 (ComposerType.T_NO_COMP, BasicType.T_REAL)]
+
+    def sem(self):
+        self.lhs.sem()
+        self.rhs.sem()
+
+        type_check(self.lhs.stype, self.arithmetic_types)
+        type_check(self.rhs.stype, self.arithmetic_types)
+
+        real_type = (ComposerType.T_NO_COMP, BasicType.T_REAL)
+        int_type = (ComposerType.T_NO_COMP, BasicType.T_INT)
+
+        if self.op == '/':
+            self.stype = real_type
+            return
+
+        if self.op == 'div' or self.op == 'mod':
+            type_check(self.lhs.stype, int_type)
+            type_check(self.rhs.stype, int_type)
+
+        if self.lhs.stype == real_type or self.rhs.stype == real_type:
+            self.stype = real_type
+            return
+
+        self.stype = int_type
+
+
+class CompOp(RValue):
+    '''
+        Comparison operation between two sides (lhs, rhs)
+    '''
+
+    def __init__(self, op, lhs, rhs, builder, module, symbol_table):
+        super(CompOp, self).__init__(builder, module, symbol_table)
+        self.op = op
+        self.lhs = lhs
+        self.rhs = rhs
+        self.arithmetic_types = [(ComposerType.T_NO_COMP, BasicType.T_INT),
+                                 (ComposerType.T_NO_COMP, BasicType.T_REAL)]
+
+    def sem(self):
+        self.lhs.sem()
+        self.rhs.sem()
+
+        if self.op == '=' or self.op == '<>':
+            arithmetic = (self.lhs.stype in self.arithmetic_types) and (self.rhs.stype in self.arithmetic_types)
+            if not_arithmetic:
+                assert self.lhs.stype == self.rhs.stype, 'Comparison is only allowed between operands of same type'
+                assert self.lhs.stype[0] != ComposerType.T_CONST_ARRAY and self.lhs.stype[0] != ComposerType.T_VAR_ARRAY, 'Arrays cannot be compared.'
+        else:
+            type_check(self.lhs.stype, self.arithmetic_types)
+            type_check(self.rhs.stype, self.arithmetic_types)
+
+        self.stype = (ComposerType.T_NO_COMP, BasicType.T_BOOL)
+
+
+class LogicOp(RValue):
+    '''
+        Logic operation between two sides (lhs, rhs)
+    '''
+
+    def __init__(self, op, lhs, rhs, builder, module, symbol_table):
+        super(LogicOp, self).__init__(builder, module, symbol_table)
+        self.op = op
+        self.lhs = lhs
+        self.rhs = rhs
+
+    def sem(self):
+        self.lhs.sem()
+        self.rhs.sem()
+        bool_type = (ComposerType.T_NO_COMP, BasicType.T_BOOL)
+
+        type_check(self.lhs.stype, bool_type)
+        type_check(self.rhs.stype, bool_type)
+
+        self.stype = bool_type
+
 
 
 class AddressOf(RValue):
@@ -407,6 +569,10 @@ class AddressOf(RValue):
             raise PCLParserError('Tried to access the address of an RValue')
         super(AddressOf, self).__init__(builder, module, symbol_table)
         self.lvalue = lvalue
+
+    def sem(self):
+        self.lvalue.sem()
+        self.stype = (ComposerType.T_PTR, self.lvalue.stype)
 
 
 class LValue(Expr):
@@ -427,6 +593,10 @@ class NameLValue(LValue):
         super(NameLValue, self).__init__(builder, module, symbol_table)
         self.id_ = id_
 
+    def sem(self):
+        result = self.symbol_table.lookup(self.id_)
+        self.stype = result.stype
+
 
 class Result(LValue):
     '''
@@ -435,6 +605,10 @@ class Result(LValue):
 
     def __init__(self, builder, module, symbol_table):
         super(Result, self).__init__(builder, module, symbol_table)
+
+    def sem(self):
+        result = self.symbol_table.lookup('result')
+        self.stype = result.stype
 
 
 class StringLiteral(LValue):
@@ -446,6 +620,9 @@ class StringLiteral(LValue):
         super(StringLiteral, self).__init__(builder, module, symbol_table)
         self.literal = literal
 
+    def sem(self):
+        self.stype = (ComposerType.T_CONST_ARRAY, BaseType.T_CHAR)
+
 
 class Deref(LValue):
     '''
@@ -454,8 +631,19 @@ class Deref(LValue):
     '''
 
     def __init__(self, expr, builder, module, symbol_table):
+        if isinstance(expr, Nil):
+            raise PCLSemError('Cannot dereference nil')
+
         super(Deref, self).__init__(builder, module, symbol_table)
         self.expr = expr
+
+    def sem(self):
+        self.expr.sem()
+        if self.expr.stype[0] != ComposerType.T_PTR:
+            raise PCLSemError('Dereferencing non-pointer expression')
+
+        self.stype = self.expr.stype[1]
+
 
 
 class SetExpression(LValue):
@@ -467,9 +655,19 @@ class SetExpression(LValue):
         self.lvalue = lvalue
         self.expr = expr
 
+    def sem(self):
+        self.expr.sem()
+        self.stype = self.expr.stype
+
 
 class LBrack(LValue):
     def __init__(self, lvalue, expr, builder, module, symbol_table):
         super(LBrack, self).__init__(builder, module, symbol_table)
         self.lvalue = lvalue
         self.expr = expr
+
+    def sem(self):
+        self.expr.sem()
+        self.expr.type_check((CompositeType.T_NO_COMP, BaseType.T_INT))
+        self.lvalue.sem()
+        self.stype = self.lvalue.stype[1]

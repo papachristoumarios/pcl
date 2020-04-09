@@ -24,6 +24,9 @@ class PCLParser(Parser):
                 module: LLVM module object
                 printf: LLVM printf function
         '''
+        self.arithmetic = ['+', '-', '*', '/', 'div', 'mod']
+        self.comp = ['>=', '<=', '>', '<']
+        self.logical = ['and', 'or', '=', '<>']
         self.codegen = PCLCodegen()
         self.symbol_table = SymbolTable()
         self.builder = self.codegen.builder
@@ -391,13 +394,35 @@ class PCLParser(Parser):
        'expr NEG expr',
        )
     def rvalue(self, p):
-        return BinOp(
-            op=p.expr0,
-            lhs=p[0],
-            rhs=p.expr1,
-            builder=self.builder,
-            module=self.module,
-            symbol_table=self.symbol_table)
+        if p[1].value in self.arithmetic:
+            return ArOp(
+                op=p[1],
+                lhs=p[0],
+                rhs=p[-1],
+                builder=self.builder,
+                module=self.module,
+                symbol_table=self.symbol_table)
+
+        if p[1].value in self.logical:
+            return LogicOp(
+                op=p[1],
+                lhs=p[0],
+                rhs=p[-1],
+                builder=self.builder,
+                module=self.module,
+                symbol_table=self.symbol_table)
+
+        if p[1].value in self.comp:
+            return CompOp(
+                op=p[1],
+                lhs=p[0],
+                rhs=p[-1],
+                builder=self.builder,
+                module=self.module,
+                symbol_table=self.symbol_table)
+
+        raise ValueError('BinOp not parsed correctly.')
+
 
     @_('NOT', 'PLUS', 'MINUS')
     def unop(self, p):
@@ -452,7 +477,6 @@ if __name__ == '__main__':
             result := 0;
             while s[result] <> "\0" do result := result + 1
         end;
-
         var r : array [32] of char;
         procedure reverse (var s : array of char);
         var i, l : integer;
