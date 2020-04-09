@@ -37,7 +37,7 @@ class Scope:
 
     def insert(self, c, st):
         if self.lookup(c):
-            msg = 'Duplicate variable {}'.format(c)
+            msg = 'Duplicate name {}'.format(c)
             raise PCLSymbolTableError(msg)
         else:
             self.locals_[c] = st
@@ -63,16 +63,21 @@ class SymbolTable:
             raise PCLSymbolTableError('Tried to pop nonexistent scope')
         return self.scopes.pop()
 
-    def lookup(self, c):
+    def lookup(self, c, last_scope=False):
         if len(self.scopes) == 0:
             raise PCLSymbolTableError('Scopes do not exist')
 
-        for scope in reversed(self.scopes):
-            entry = scope.lookup(c)
+        if last_scope:
+            entry = self.scopes[-1].lookup(c)
             if entry:
                 return entry
+        else:
+            for scope in reversed(self.scopes):
+                entry = scope.lookup(c)
+                if entry:
+                    return entry
 
-        msg = 'Unknown variable: {}'.format(c)
+        msg = 'Unknown name: {}'.format(c)
         raise PCLSymbolTableError(msg)
 
     def insert(self, c, t):
