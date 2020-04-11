@@ -310,7 +310,7 @@ class PCLParser(Parser):
     @_('STRING')
     def lvalue(self, p):
         return StringLiteral(
-            literal=p[0],
+            literal=p[0][1:-1],
             builder=self.builder,
             module=self.module,
             symbol_table=self.symbol_table)
@@ -356,7 +356,7 @@ class PCLParser(Parser):
 
     @_('CHARACTER')
     def rvalue(self, p):
-        return CharConst(value=p[0][1], builder=self.builder, module=self.module,
+        return CharConst(value=p[0][1:-1], builder=self.builder, module=self.module,
                          symbol_table=self.symbol_table)
 
     @_('LPAREN rvalue RPAREN')

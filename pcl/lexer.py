@@ -116,7 +116,7 @@ class PCLLexer(Lexer):
     INT_CONS = r'[0-9]+(?!\.)'
     REAL_CONS = r"[0-9]+(\.[0-9]+(['E', 'e']['\+','\-']?[0-9]+)?)?"
     NAME = r"(?<!\d\W\_)[^\d\W\_]\w*"
-    CHARACTER = r"('.')"
+    CHARACTER = r"'.|\\['n', 'r', '0', 't', '\\', '\"', '\'']'"
     STRING = r"\"[^\"]*\""
 
     # Ignore newlines
