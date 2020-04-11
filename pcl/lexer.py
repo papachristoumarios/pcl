@@ -6,6 +6,9 @@ import re
 def regex(s):
     return re.escape(s)
 
+def regex_kw(s):
+    return r'(?<!.)' + re.escape(s) + r'(?!.)'
+
 
 class PCLLexer(Lexer):
     tokens = {
@@ -79,7 +82,9 @@ class PCLLexer(Lexer):
     ignore_comment = r'(?s)\(\*.*?\*\)'
 
     # This must be a string and not [\s, \t, \r ] according to SLY docs
-    ignore = ' \t\r'
+    IGNORE = [' ', '\t', '\r']
+    ignore = ''.join(IGNORE)
+
 
     # Keywords
     AND = regex('and')
@@ -141,7 +146,7 @@ class PCLLexer(Lexer):
     COMMA = regex(',')
 
     # "Special" tokens:
-    INT_CONS = r'[0-9]+'
+    INT_CONS = r'[0-9]+(?!\.)'
     REAL_CONS = r"[0-9]+(\.[0-9]+(['E', 'e']['\+','\-']?[0-9]+)?)?"
     NAME = r"(?<!\d\W\_)[^\d\W\_]\w*"
     CHARACTER = r"('.')"
