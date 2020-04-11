@@ -28,6 +28,12 @@ class AST(ABC):
     def sem(self):
         raise NotImplementedError('sem method not implemented for this node')
 
+    def codegen(self):
+        pass
+
+    def pipeline(self, pipeline=['sem', 'codegen']):
+        for stage in pipeline:
+            getattr(self, stage)()
 
     def type_check(self, target, *args):
         '''
@@ -46,10 +52,6 @@ class AST(ABC):
         msg = '{}: Expected type {}, got type {}. {}'.format(
             self.__class__.__name__, target, self.stype, ' '.join(args))
         raise PCLSemError(msg)
-
-
-    def codegen(self):
-        pass
 
     def pprint(self, indent=0):
         '''

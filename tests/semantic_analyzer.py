@@ -32,7 +32,7 @@ def test_valid(example):
     print('Running example: {}'.format(example))
     tokens = lexer.tokenize(example)
     program = parser.parse(tokens)
-    program.sem()
+    program.pipeline()
 
 @pytest.mark.parametrize("example", invalid_examples)
 def test_invalid(example):
