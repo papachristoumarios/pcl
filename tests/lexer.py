@@ -113,7 +113,7 @@ def test_reals():
         x := 2.5;
     end.
     '''
-    assert tokenize(s) == ['PROGRAM', 'REAL', 'NAME', 'SEMICOLON', 'VAR',
+    assert tokenize(s) == ['PROGRAM', 'NAME', 'SEMICOLON', 'VAR',
                            'NAME', 'DCOLON', 'INTEGER', 'SEMICOLON', 'BEGIN',
                            'NAME', 'SET', 'REAL_CONS', 'SEMICOLON', 'END',
                            'COLON']
@@ -121,14 +121,17 @@ def test_reals():
 def test_vars():
     s = '''
     program var1;
-    var x : integer;
+        var x : integer;
     begin
       x := y + 1;
       y := y + 1;
     end.
     '''
-    # TODO: WIP
-    assert tokenize(s) == []
+    assert tokenize(s) == ['PROGRAM', 'NAME', 'SEMICOLON', 'VAR', 'NAME', 'DCOLON',
+                            'INTEGER', 'SEMICOLON', 'BEGIN', 'NAME', 'SET', 'NAME', 'PLUS',
+                            'INT_CONS', 'SEMICOLON', 'NAME', 'SET', 'NAME', 'PLUS',
+                            'INT_CONS', 'SEMICOLON', 'END', 'COLON']
+
 
 if __name__ == '__main__':
     pytest.main(args=[os.path.abspath(__file__)])
