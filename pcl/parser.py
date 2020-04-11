@@ -2,11 +2,11 @@ from sly import Parser
 from collections import deque
 import pprint
 
-from lexer import PCLLexer
-from error import PCLParserError
-from ast import *
-from symbol_table import SymbolTable
-from codegen import PCLCodegen
+from pcl.lexer import PCLLexer
+from pcl.error import PCLParserError
+from pcl.ast import *
+from pcl.symbol_table import SymbolTable
+from pcl.codegen import PCLCodegen
 
 
 class PCLParser(Parser):
@@ -197,7 +197,8 @@ class PCLParser(Parser):
     @_('BEGIN stmt semicolon_stmt_list END')
     def block(self, p):
         p.semicolon_stmt_list.appendleft(p.stmt)
-        return p.semicolon_stmt_list
+        return Block(stmt_list=p.semicolon_stmt_list, builder=self.builder,
+                     module=self.module, symbol_table=self.symbol_table)
 
     @_('')
     def semicolon_stmt_list(self, p):
@@ -355,7 +356,7 @@ class PCLParser(Parser):
 
     @_('CHARACTER')
     def rvalue(self, p):
-        return CharConst(value=p[0], builder=self.builder, module=self.module,
+        return CharConst(value=p[0][1], builder=self.builder, module=self.module,
                          symbol_table=self.symbol_table)
 
     @_('LPAREN rvalue RPAREN')
@@ -375,7 +376,7 @@ class PCLParser(Parser):
     # UNARY OPERATORS
     @_('unop expr %prec UN_OP')
     def rvalue(self, p):
-        if p.unop.value in self.arithmetic:
+        if p.unop in self.arithmetic:
             return ArUnOp(
                 op=p.unop,
                 rhs=p.expr,
@@ -406,7 +407,7 @@ class PCLParser(Parser):
        'expr NEG expr',
        )
     def rvalue(self, p):
-        if p[1].value in self.arithmetic:
+        if p[1] in self.arithmetic:
             return ArOp(
                 op=p[1],
                 lhs=p[0],
@@ -415,7 +416,7 @@ class PCLParser(Parser):
                 module=self.module,
                 symbol_table=self.symbol_table)
 
-        if p[1].value in self.logical:
+        if p[1] in self.logical:
             return LogicOp(
                 op=p[1],
                 lhs=p[0],
@@ -424,7 +425,7 @@ class PCLParser(Parser):
                 module=self.module,
                 symbol_table=self.symbol_table)
 
-        if p[1].value in self.comp:
+        if p[1] in self.comp:
             return CompOp(
                 op=p[1],
                 lhs=p[0],
