@@ -121,12 +121,21 @@ class LocalHeader(Local):
         self.body = body
 
     def sem(self):
+        if self.header.func_type:
+            # function
+            self.header.func_type.sem()
+            header_name_entry = SymbolEntry(stype=self.header.func_type.stype, name_type=NameType.N_FUNCTION)
+        else:
+            # procedure
+            header_name_entry = SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_PROC), name_type=NameType.N_PROCEDURE)
+
+        self.symbol_table.insert(self.header.id_, header_name_entry)
+
         # Open function scope
         self.symbol_table.open_scope()
 
         # Register header locals
         self.header.sem()
-
         for formal in self.header.formals:
             formal.sem()
             for id_ in formal.ids:
@@ -214,11 +223,11 @@ class Header(AST):
 
     def sem(self):
         if self.func_type:
-            self.func_type.sem()
             result_entry = SymbolEntry(stype=self.func_type.stype, name_type=NameType.N_VAR)
             self.symbol_table.insert('result', result_entry)
 
         for formal in self.formals:
+            formal.sem()
             for formal_id in formal.ids:
                 formal_entry = SymbolEntry(stype=formal.stype, name_type=NameType.N_FORMAL)
                 self.symbol_table.insert_formal(self.id_, formal_id, formal_entry)
@@ -319,7 +328,14 @@ class Call(AST):
         # Check arguments
         for expr, (formal_name, formal) in zip(self.exprs, formals):
             expr.sem()
-            expr.type_check(formal.stype, 'Formal name: {}'.format(formal_name))
+            if expr.stype == formal.stype and is_composite(expr.stype):
+                continue
+            elif formal.stype[1] == BaseType.T_REAL and expr.stype[1] == BaseType.T_INT:
+                continue
+            elif formal.stype[0] == ComposerType.T_VAR_ARRAY and expr.stype[0] == ComposerType.T_CONST_ARRAY:
+                continue
+            else:
+                expr.type_check(formal.stype)
 
 
 class If(Statement):
@@ -725,7 +741,7 @@ class StringLiteral(LValue):
         self.literal = literal
 
     def sem(self):
-        self.stype = (ComposerType.T_CONST_ARRAY, BaseType.T_CHAR)
+        self.stype = (ComposerType.T_CONST_ARRAY, (ComposerType.T_NO_COMP, BaseType.T_CHAR))
 
 
 class Deref(LValue):
