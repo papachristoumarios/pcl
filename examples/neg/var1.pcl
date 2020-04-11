@@ -1,0 +1,6 @@
+program var1;
+var x : integer;
+begin
+  x := y + 1;
+  y := y + 1;
+end.

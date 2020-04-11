@@ -1,0 +1,8 @@
+program takis;
+  var x : integer;
+  var y : real;
+begin
+  x := 1;
+  y := 3.14;
+  x := y;
+end.

@@ -2,7 +2,7 @@
         function strlen (var s : array of char) : integer;
         begin
             result := 0;
-            while s[result] <> "\0" do result := result + 1
+            while s[result] <> 'c' do result := result + 1
         end;
 
         var r : array [32] of char;
@@ -16,7 +16,7 @@
                     r[i] := s[l-i-1];
                     i := i+1
                 end;
-            r[i] := "\0"
+            r[i] := 'c'
         end;
 
         begin

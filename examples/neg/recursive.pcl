@@ -1,0 +1,10 @@
+program recursive;
+
+procedure recursive();
+begin
+  recursive();
+end;
+
+begin
+  recursive();
+end.

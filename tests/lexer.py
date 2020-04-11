@@ -105,7 +105,30 @@ def test_reverse():
                            'NAME', 'LPAREN', 'STRING', 'RPAREN', 'SEMICOLON',
                            'NAME', 'LPAREN', 'NAME', 'RPAREN', 'END', 'COLON'])
 
+def test_reals():
+    s = '''
+    program reals;
+    var x : integer;
+    begin
+        x := 2.5;
+    end.
+    '''
+    assert tokenize(s) == ['PROGRAM', 'REAL', 'NAME', 'SEMICOLON', 'VAR',
+                           'NAME', 'DCOLON', 'INTEGER', 'SEMICOLON', 'BEGIN',
+                           'NAME', 'SET', 'REAL_CONS', 'SEMICOLON', 'END',
+                           'COLON']
 
+def test_vars():
+    s = '''
+    program var1;
+    var x : integer;
+    begin
+      x := y + 1;
+      y := y + 1;
+    end.
+    '''
+    # TODO: WIP
+    assert tokenize(s) == []
 
 if __name__ == '__main__':
     pytest.main(args=[os.path.abspath(__file__)])
