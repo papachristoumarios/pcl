@@ -1,6 +1,7 @@
 from sly import Lexer
-from error import PCLLexerError
+from pcl.error import PCLLexerError
 import re
+
 
 def regex(s):
     return re.escape(s)
@@ -143,7 +144,7 @@ class PCLLexer(Lexer):
     INT_CONS = r'[0-9]+'
     REAL_CONS = r"[0-9]+(\.[0-9]+(['E', 'e']['\+','\-']?[0-9]+)?)?"
     NAME = r"(?<!\d\W\_)[^\d\W\_]\w*"
-    CHARACTER = "'" + ".|" + "'"
+    CHARACTER = r"('.')"
     STRING = r"\"[^\"]*\""
 
     # Ignore newlines

@@ -1,6 +1,6 @@
 from ctypes import CFUNCTYPE, c_double
 from llvmlite import ir, binding
-from error import PCLCodegenError
+from pcl.error import PCLCodegenError
 from enum import Enum
 import os
 
