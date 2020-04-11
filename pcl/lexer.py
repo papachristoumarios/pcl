@@ -6,45 +6,49 @@ import re
 def regex(s):
     return re.escape(s)
 
-def regex_kw(s):
-    return r'(?<!.)' + re.escape(s) + r'(?!.)'
+def kw(s):
+    return r'^{}$'.format(s)
 
 
 class PCLLexer(Lexer):
+
+    # keywords
+    keywords = {
+        regex('and') : 'AND',
+        regex('do') : 'DO',
+        regex('if') : 'IF',
+        regex('of') : 'OF',
+        regex('then') : 'THEN',
+        regex('array') : 'ARRAY',
+        regex('else') : 'ELSE',
+        regex('integer') : 'INTEGER',
+        regex('or') : 'OR',
+        regex('true') : 'TRUE',
+        regex('begin') : 'BEGIN',
+        regex('end') : 'END',
+        regex('label') : 'LABEL',
+        regex('procedure') : 'PROCEDURE',
+        regex('var') : 'VAR',
+        regex('boolean') : 'BOOLEAN',
+        regex('false') : 'FALSE',
+        regex('mod') : 'MOD',
+        regex('program') : 'PROGRAM',
+        regex('while') : 'WHILE',
+        regex('char') : 'CHAR',
+        regex('forward') : 'FORWARD',
+        regex('new') : 'NEW',
+        regex('real') : 'REAL',
+        regex('dispose') : 'DISPOSE',
+        regex('function') : 'FUNCTION',
+        regex('nil') : 'NIL',
+        regex('result') : 'RESULT',
+        regex('div') : 'DIV',
+        regex('goto') : 'GOTO',
+        regex('not') : 'NOT',
+        regex('return') : 'RETURN'
+    }
+
     tokens = {
-        # keywords
-        AND,
-        DO,
-        IF,
-        OF,
-        THEN,
-        ARRAY,
-        ELSE,
-        INTEGER,
-        OR,
-        TRUE,
-        BEGIN,
-        END,
-        LABEL,
-        PROCEDURE,
-        VAR,
-        BOOLEAN,
-        FALSE,
-        MOD,
-        PROGRAM,
-        WHILE,
-        CHAR,
-        FORWARD,
-        NEW,
-        REAL,
-        DISPOSE,
-        FUNCTION,
-        NIL,
-        RESULT,
-        DIV,
-        GOTO,
-        NOT,
-        RETURN,
         # Arithmetic operators
         EQUAL,
         LPAREN,
@@ -75,50 +79,13 @@ class PCLLexer(Lexer):
         NAME,
         STRING,
         NEWLINE
-
-    }
+    } | set(keywords.values())
 
     # Ignore multiline comments
     ignore_comment = r'(?s)\(\*.*?\*\)'
 
     # This must be a string and not [\s, \t, \r ] according to SLY docs
-    IGNORE = [' ', '\t', '\r']
-    ignore = ''.join(IGNORE)
-
-
-    # Keywords
-    AND = regex('and')
-    DO = regex('do')
-    IF = regex('if')
-    OF = regex('of')
-    THEN = regex('then')
-    ARRAY = regex('array')
-    ELSE = regex('else')
-    INTEGER = regex('integer')
-    OR = regex('or')
-    TRUE = regex('true')
-    BEGIN = regex('begin')
-    END = regex('end')
-    LABEL = regex('label')
-    PROCEDURE = regex('procedure')
-    VAR = regex('var')
-    BOOLEAN = regex('boolean')
-    FALSE = regex('false')
-    MOD = regex('mod')
-    PROGRAM = regex('program')
-    WHILE = regex('while')
-    CHAR = regex('char')
-    FORWARD = regex('forward')
-    NEW = regex('new')
-    REAL = regex('real')
-    DISPOSE = regex('dispose')
-    FUNCTION = regex('function')
-    NIL = regex('nil')
-    RESULT = regex('result')
-    DIV = regex('div')
-    GOTO = regex('goto')
-    NOT = regex('not')
-    RETURN = regex('return')
+    ignore = ' \t\r'
 
     # Arithmetic operators
     EQUAL = regex('=')
@@ -154,6 +121,10 @@ class PCLLexer(Lexer):
 
     # Ignore newlines
     ignore_newline = '\n+'
+
+    def NAME(self, t):
+        t.type = PCLLexer.keywords.get(t.value, 'NAME')
+        return t
 
     # Increase line counts upon newlines and comments
     def ignore_comment(self, t):
