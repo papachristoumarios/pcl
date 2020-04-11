@@ -33,10 +33,11 @@ class MetaType:
     T_INCOMPLETE = 'incomplete'
 
 class NameType(Enum):
-    N_VAR = 'n_var'
-    N_LABEL = 'n_label'
-    N_PROCEDURE = 'n_procedure'
-    N_FORWARD = 'n_forward'
+    N_VAR = 'n_var' # var x, result
+    N_LABEL = 'n_label' # label declaration (you define that a line will have this label)
+    N_PROCEDURE = 'n_procedure' # procedure declaration (does not return anything)
+    N_FUNCTION = 'n_function' # function declaration (returns at least something)
+    N_FORWARD = 'n_forward' # forward header declaration (declare that function is recursive (in header))
     N_FORMAL = 'n_formal'
 
 
@@ -48,6 +49,9 @@ class SymbolEntry:
         self.offset = None
 
 builtins = [('writeInteger',
+             SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_PROC),
+                         name_type=NameType.N_PROCEDURE)),
+            ('writeString',
              SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_PROC),
                          name_type=NameType.N_PROCEDURE))
            ]
