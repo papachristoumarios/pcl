@@ -31,8 +31,8 @@ class AST(ABC):
     def codegen(self):
         pass
 
-    def pipeline(self, pipeline=['sem', 'codegen']):
-        for stage in pipeline:
+    def pipeline(self, *stages):
+        for stage in stages:
             getattr(self, stage)()
 
     def type_check(self, target, *args):
