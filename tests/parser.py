@@ -1,8 +1,9 @@
 import pytest
 import glob
 import os
-from pcl.parser import PCLParser as Parser
-from pcl.lexer import PCLLexer as Lexer
+from pcl import PCLParser as Parser
+from pcl import PCLLexer as Lexer
+import pytest
 
 lexer = Lexer()
 parser = Parser()
@@ -17,8 +18,10 @@ for filename in glob.iglob(os.path.join(examples_folder, "*.pcl")):
 
 def test_valid():
     for example in valid_examples:
-        print(example)
         tokens = lexer.tokenize(example)
-        print([x.value for x in tokens])
         program = parser.parse(tokens)
         program.pprint()
+
+
+if __name__ == '__main__':
+    pytest.main(args=[os.path.abspath(__file__)])
