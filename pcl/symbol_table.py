@@ -1,6 +1,6 @@
 from enum import Enum
 from itertools import product
-from collections import deque, defaultdict
+from collections import deque, defaultdict, OrderedDict
 from pcl.error import PCLSymbolTableError
 
 
@@ -59,10 +59,11 @@ builtins = [('writeInteger',
 
 
 class Scope:
-    def __init__(self, offset=-1, size=0):
+    def __init__(self, name, offset=-1, size=0):
         self.locals_ = {}
         self.offset = offset
         self.size = size
+        self.name = name
 
     def lookup(self, c):
         return self.locals_.get(c, None)
@@ -77,18 +78,30 @@ class Scope:
             self.locals_[c] = st
             self.size += 1
 
+class FormalScope:
+    def __init__(self, name, offset=-1, size=0):
+        self.locals_ = defaultdict(OrderedDict)
+        self.offset = offset
+        self.size = size
+        self.name = name
+
+    def lookup(self, h, c):
+        return self.locals_[h].get(c, None)
+
+    def insert(self, h, c, st):
+        if self.lookup(h, c):
+            msg = 'Duplicate formal {}'.format(c)
+            raise PCLSymbolTableError(msg)
+        else:
+            st.offset = self.offset
+            self.offset += 1
+            self.locals_[h][c] = st
+            self.size += 1
 
 class SymbolTable:
     def __init__(self):
         self.scopes = deque([])
-
-        # OPTIMIZE keep one copy
-
-        # O(1) Lookup and Insert
-        self.formals = defaultdict(dict)
-
-        # Linear checking
-        self.formals_list = defaultdict(deque)
+        self.formals = deque([])
 
         # scope for builtins
         self.open_scope()
@@ -103,19 +116,24 @@ class SymbolTable:
         # close built-in scopes
         self.close_scope()
 
-    def open_scope(self):
+    def open_scope(self, name=None):
         if len(self.scopes) == 0:
             ofs = 0
+            ofs_formal = 0
         else:
             ofs = self.scopes[-1].offset
-        scope = Scope(offset=ofs)
+            ofs_formal = self.formals[-1].offset
+        scope = Scope(name=name, offset=ofs)
+        formal = FormalScope(name=name, offset=ofs_formal)
         self.scopes.append(scope)
+        self.formals.append(formal)
         return scope
 
     def close_scope(self):
         if len(self.scopes) == 0:
             raise PCLSymbolTableError('Tried to pop nonexistent scope')
-        return self.scopes.pop()
+        self.scopes.pop()
+        self.formals.pop()
 
     def lookup(self, c, last_scope=False):
         if len(self.scopes) == 0:
@@ -141,25 +159,37 @@ class SymbolTable:
         self.scopes[-1].insert(c, t)
 
     def insert_formal(self, header, formal, t):
-        if self.formals[header].get(formal, None) is not None:
-            raise PCLSymbolTableError('Duplicate formal {} in header {}'.format(formal, header))
+        if len(self.formals) == 0:
+            raise PCLSymbolTableError('Formals lists do not exist')
+        self.formals[-1].insert(header, formal, t)
 
-        self.formals[header][formal] = t
-
-        self.formals_list[header].append((formal, t))
 
     def lookup_formal(self, header, formal):
-        result = self.formals[header].get(formal, None)
+        if len(self.formals) == 0:
+            raise PCLSymbolTableError('Formal scopes do not exist')
 
-        if result:
-            return result
+        if last_scope:
+            entry = self.formals[-1].lookup(header, formal)
+            if entry:
+                return entry
         else:
-            raise PCLSymbolTableError('Unknown formal {} in header {}'.format(formal, header))
+            for formal in reversed(self.formals):
+                entry = formal.lookup(header, formal)
+                if entry:
+                    return entry
 
-    def formal_generator(self, header):
-        for elem in self.formals_list[header]:
-            yield elem
+        msg = 'Unknown formal {} in header {}'.format(formal, header)
+        raise PCLSymbolTableError(msg)
 
+    def formal_generator(self, header_name):
+        for formals_entry in reversed(self.formals):
+            if header_name in formals_entry.locals_:
+                for elem in formals_entry.locals_[header]:
+                    yield elem
+
+    def needs_forward_declaration(self, header):
+        if self.scopes[-1].name == header:
+            self.lookup('forward_' + header)
 
 if __name__ == '__main__':
     pass

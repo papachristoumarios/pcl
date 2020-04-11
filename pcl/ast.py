@@ -85,7 +85,7 @@ class Program(AST):
 
     def sem(self):
         # Open program scope
-        self.symbol_table.open_scope()
+        self.symbol_table.open_scope(self.id_)
 
         # Run sem on body
         self.body.sem()
@@ -132,7 +132,10 @@ class LocalHeader(Local):
         self.symbol_table.insert(self.header.id_, header_name_entry)
 
         # Open function scope
-        self.symbol_table.open_scope()
+        self.symbol_table.open_scope(self.header.id_)
+
+        # Needed for forward declaration
+        self.symbol_table.insert(self.header.id_, header_name_entry)
 
         # Register header locals
         self.header.sem()
@@ -314,6 +317,9 @@ class Call(AST):
         self.exprs = exprs
 
     def sem(self):
+        # Assert that if call is recursive (calee calls himself) then fcn must be forward
+        self.symbol_table.needs_forward_declaration(self.id_)
+
         try:
             # Search original symbol table (non-recursive)
             call_entry = self.symbol_table.lookup(self.id_)
