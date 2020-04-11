@@ -29,23 +29,23 @@ for filename in glob.iglob(os.path.join(neg_examples_folder, "*.pcl")):
 def test_valid(example):
     if example == '':
         return
-    logging.log(logging.INFO, 'Running example: {}'.format(example))
+    print('Running example: {}'.format(example))
     tokens = lexer.tokenize(example)
     program = parser.parse(tokens)
     program.sem()
 
-# @pytest.mark.parametrize("example", invalid_examples)
-# def test_invalid(example):
-#     if example == '':
-#         return
-#     logging.log(logging.INFO, 'Running example: {}'.format(example))
-#     try:
-#         tokens = lexer.tokenize(example)
-#         program = parser.parse(tokens)
-#         program.sem()
-#         assert 1 == 0, 'Negative program passed'
-#     except PCLError as e:
-#         print(e)
+@pytest.mark.parametrize("example", invalid_examples)
+def test_invalid(example):
+    if example == '':
+        return
+    print('Running example: {}'.format(example))
+    try:
+        tokens = lexer.tokenize(example)
+        program = parser.parse(tokens)
+        program.sem()
+        assert 1 == 0, 'Negative program passed'
+    except PCLError as e:
+        print(e)
 
 if __name__ == '__main__':
     pytest.main(args=[os.path.abspath(__file__)])

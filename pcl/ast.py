@@ -184,7 +184,7 @@ class Label(Local):
     def sem(self):
         # Iterate over all names and register variables
         for id_ in self.ids:
-            label_entry = SymbolEntry(stype=BaseType.T_LABEL, name_type=NameType.N_LABEL)
+            label_entry = SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_LABEL), name_type=NameType.N_LABEL)
             self.symbol_table.insert(id_, label_entry)
 
 
