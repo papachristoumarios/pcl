@@ -1,7 +1,7 @@
 from enum import Enum
 from itertools import product
 from collections import deque, defaultdict
-from error import PCLSymbolTableError
+from pcl.error import PCLSymbolTableError
 
 
 class BaseType(Enum):
@@ -12,6 +12,7 @@ class BaseType(Enum):
     T_NIL = 'nil'
     T_PROC = 'procedure'
     T_FCN = 'function'
+    T_LABEL = 'label'
 
 
 class ComposerType(Enum):
@@ -23,9 +24,9 @@ class ComposerType(Enum):
 def is_composite(stype):
     return stype[0] != ComposerType.T_VAR_ARRAY
 
-arithmetic_types = [(ComposerType.T_NO_COMP, BasicType.T_INT),
-                         (ComposerType.T_NO_COMP, BasicType.T_REAL)]
-    
+arithmetic_types = [(ComposerType.T_NO_COMP, BaseType.T_INT),
+                         (ComposerType.T_NO_COMP, BaseType.T_REAL)]
+
 
 class MetaType:
     T_COMPLETE = 'complete'
@@ -45,6 +46,13 @@ class SymbolEntry:
         self.stype = stype
         self.name_type = name_type
         self.offset = None
+
+builtins = [('writeInteger',
+             SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_PROC),
+                         name_type=NameType.N_PROCEDURE))
+           ]
+
+
 
 class Scope:
     def __init__(self, offset=-1, size=0):
@@ -77,6 +85,19 @@ class SymbolTable:
 
         # Linear checking
         self.formals_list = defaultdict(deque)
+
+        # scope for builtins
+        self.open_scope()
+
+        for builtin_name, builtin_entry in builtins:
+            self.insert(builtin_name, builtin_entry)
+
+    def __del__(self):
+        if len(self.scopes) > 1:
+            raise PCLSymbolTableError('Open scope(s) not closed.')
+
+        # close built-in scopes
+        self.close_scope()
 
     def open_scope(self):
         if len(self.scopes) == 0:
@@ -116,7 +137,7 @@ class SymbolTable:
         self.scopes[-1].insert(c, t)
 
     def insert_formal(self, header, formal, t):
-        if not self.formals[header].get(formal, None):
+        if self.formals[header].get(formal, None) is not None:
             raise PCLSymbolTableError('Duplicate formal {} in header {}'.format(formal, header))
 
         self.formals[header][formal] = t
