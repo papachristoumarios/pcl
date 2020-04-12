@@ -1,0 +1,12 @@
+program array1;
+
+    var x: array [10] of integer;
+    var i: integer;
+begin
+    i := 0;
+    while i < 10 do
+    begin
+        x[i] := i;
+    end;
+  
+end.
