@@ -87,7 +87,7 @@ class Program(AST):
 
     def sem(self):
         # Open program scope
-        self.symbol_table.open_scope(self.id_)
+        self.symbol_table.open_scope()
 
         # Run sem on body
         self.body.sem()
@@ -132,6 +132,12 @@ class LocalHeader(Local):
             header_name_entry = SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_PROC), name_type=NameType.N_PROCEDURE)
 
         self.symbol_table.insert(self.header.id_, header_name_entry)
+
+        for formal in self.header.formals:
+            formal.sem()
+            for formal_id in formal.ids:
+                formal_entry = SymbolEntry(stype=formal.stype, name_type=NameType.N_FORMAL)
+                self.symbol_table.insert_formal(self.header.id_, formal_id, formal_entry)
 
         # Open function scope
         self.symbol_table.open_scope(self.header.id_)
@@ -205,6 +211,13 @@ class Forward(Local):
         forward_entry = SymbolEntry(stype=header_type, name_type=NameType.N_FORWARD)
         self.symbol_table.insert('forward_' + self.header.id_, forward_entry)
 
+        for formal in self.header.formals:
+            formal.sem()
+            for formal_id in formal.ids:
+                formal_entry = SymbolEntry(stype=formal.stype, name_type=NameType.N_FORMAL)
+                self.symbol_table.insert_formal('forward_'+ self.header.id_, formal_id, formal_entry)
+
+
 class Header(AST):
     def __init__(
             self,
@@ -231,11 +244,6 @@ class Header(AST):
             result_entry = SymbolEntry(stype=self.func_type.stype, name_type=NameType.N_VAR)
             self.symbol_table.insert('result', result_entry)
 
-        for formal in self.formals:
-            formal.sem()
-            for formal_id in formal.ids:
-                formal_entry = SymbolEntry(stype=formal.stype, name_type=NameType.N_FORMAL)
-                self.symbol_table.insert_formal(self.id_, formal_id, formal_entry)
 
 class Formal(AST):
 
@@ -312,39 +320,35 @@ class Block(Statement):
             stmt.sem()
 
 
-class Call(AST):
+class Call(Statement):
     def __init__(self, id_, exprs, builder, module, symbol_table):
         super(Call, self).__init__(builder, module, symbol_table)
         self.id_ = id_
         self.exprs = exprs
 
     def sem(self):
+
         # Assert that if call is recursive (calee calls himself) then fcn must be forward
         self.symbol_table.needs_forward_declaration(self.id_)
 
-        try:
-            # Search original symbol table (non-recursive)
-            call_entry = self.symbol_table.lookup(self.id_)
-            formals = self.symbol_table.formal_generator(self.id_)
-        except PCLSymbolTableError:
-            # Original name not found, try with forward_
-            call_entry = self.symbol_table.lookup('forward_' + self.id_)
-            formals = self.symbol_table.formal_generator('forward_' + self.id_)
-
+        call_entry = self.symbol_table.lookup(self.id_)
+        formals = self.symbol_table.formal_generator(self.id_)
         self.stype = call_entry.stype
 
         # Check arguments
         for expr, (formal_name, formal) in zip(self.exprs, formals):
             expr.sem()
-            if expr.stype == formal.stype and is_composite(expr.stype):
-                continue
-            elif formal.stype[1] == BaseType.T_REAL and expr.stype[1] == BaseType.T_INT:
-                continue
-            elif formal.stype[0] == ComposerType.T_VAR_ARRAY and expr.stype[0] == ComposerType.T_CONST_ARRAY:
-                continue
-            else:
+            try:
                 expr.type_check(formal.stype)
-
+            except PCLSemError as e:
+                if expr.stype == formal.stype and is_composite(expr.stype):
+                    continue
+                elif formal.stype[1] == BaseType.T_REAL and expr.stype[1] == BaseType.T_INT:
+                    continue
+                elif formal.stype[0] == ComposerType.T_VAR_ARRAY and expr.stype[0] == ComposerType.T_CONST_ARRAY:
+                    continue
+                else:
+                    raise e
 
 class If(Statement):
     '''

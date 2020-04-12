@@ -53,7 +53,15 @@ builtins = [('writeInteger',
                          name_type=NameType.N_PROCEDURE)),
             ('writeString',
              SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_PROC),
-                         name_type=NameType.N_PROCEDURE))
+                         name_type=NameType.N_PROCEDURE)),
+            ('writeBoolean',
+             SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_PROC),
+                         name_type=NameType.N_PROCEDURE)),
+            ('writeChar',
+             SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_PROC),
+                         name_type=NameType.N_PROCEDURE)),
+
+
            ]
 
 
@@ -184,7 +192,7 @@ class SymbolTable:
     def formal_generator(self, header_name):
         for formals_entry in reversed(self.formals):
             if header_name in formals_entry.locals_:
-                for elem in formals_entry.locals_[header]:
+                for elem in formals_entry.locals_[header_name].items():
                     yield elem
 
     def needs_forward_declaration(self, header):

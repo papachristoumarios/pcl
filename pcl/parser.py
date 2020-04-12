@@ -484,31 +484,15 @@ if __name__ == '__main__':
     parser = PCLParser()
 
     s = '''
-    program reverse;
-        function strlen (var s : array of char) : integer;
-        begin
-            result := 0;
-            while s[result] <> "\0" do result := result + 1
-        end;
-        var r : array [32] of char;
-        procedure reverse (var s : array of char);
-        var i, l : integer;
-        begin
-            l := strlen(s);
-            i := 0;
-            while i < l do
-                begin
-                    r[i] := s[l-i-1];
-                    i := i+1
-                end;
-            r[i] := "\0"
-        end;
+    program foo;
+    function f(var x: integer) : integer;
+    begin
+        result := 1;
+    end;
 
-        begin
-            reverse("\n!dlrow olleH");
-            writeString(r)
-        end.
-
+    begin
+        f(3.5);
+    end.
     '''
 
     tokens = list(lexer.tokenize(s))
@@ -516,4 +500,5 @@ if __name__ == '__main__':
 
     # tokens = lexer.tokenize(s)
     program = parser.parse(iter(tokens))
+    program.sem()
     program.pprint()
