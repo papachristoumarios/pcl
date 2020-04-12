@@ -1,0 +1,9 @@
+program if_else;
+
+begin
+  if 3.5 then
+  begin
+    writeInteger(3);
+  end;
+
+end.

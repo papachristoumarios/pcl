@@ -1,0 +1,11 @@
+program formals1;
+
+function foo(var x: integer) : integer;
+begin
+  result := 2;
+  return;
+end;
+
+begin
+  foo(3.4);
+end.

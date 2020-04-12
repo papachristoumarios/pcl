@@ -1,0 +1,6 @@
+program yes;
+label l;
+begin
+  l: writeString("yes!");
+  goto l;
+end.

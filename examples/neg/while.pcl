@@ -1,0 +1,9 @@
+program while1;
+
+begin
+  while 3.5 do
+  begin
+    writeInteger(3);
+  end;
+
+end.

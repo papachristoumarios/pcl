@@ -1,0 +1,5 @@
+program nil1;
+
+begin
+  nil^;
+end.

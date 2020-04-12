@@ -1,0 +1,9 @@
+program nil1;
+  var x: ^integer;
+begin
+  x := nil;
+  if x <> nil then
+  begin
+    writeString("Hello");
+  end;
+end.

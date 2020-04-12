@@ -1,0 +1,10 @@
+program pointer;
+
+var x: integer;
+var y: ^integer;
+
+begin
+  x := 4;
+  y := @x;
+  x := y^;
+end.
