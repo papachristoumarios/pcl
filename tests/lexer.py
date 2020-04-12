@@ -58,7 +58,7 @@ def test_reverse():
             function strlen (var s : array of char) : integer;
             begin
                 result := 0;
-                while s[result] <> 'c' do result := result + 1
+                while s[result] <> 'c' do result := result + 1;
             end;
 
             var r : array [32] of char;
@@ -70,9 +70,9 @@ def test_reverse():
                 while i < l do
                     begin
                         r[i] := s[l-i-1];
-                        i := i+1
+                        i := i+1;
                     end;
-                r[i] := "\0"
+                r[i] := '\0';
             end;
 
             begin
@@ -85,25 +85,27 @@ def test_reverse():
                            'CHAR', 'RPAREN', 'DCOLON', 'INTEGER', 'SEMICOLON',
                            'BEGIN', 'RESULT', 'SET', 'INT_CONS', 'SEMICOLON',
                            'WHILE', 'NAME', 'LSQUARE', 'RESULT', 'RSQUARE',
-                           'NEG', 'CHARACTER', 'DO', 'RESULT',
-                           'SET', 'RESULT', 'PLUS', 'INT_CONS', 'END',
-                           'SEMICOLON', 'VAR', 'NAME', 'DCOLON', 'ARRAY',
-                           'LSQUARE', 'INT_CONS', 'RSQUARE', 'OF', 'CHAR',
-                           'SEMICOLON', 'PROCEDURE', 'NAME', 'LPAREN', 'VAR',
-                           'NAME', 'DCOLON', 'ARRAY', 'OF', 'CHAR', 'RPAREN',
+                           'NEG', 'CHARACTER', 'DO', 'RESULT', 'SET', 'RESULT',
+                           'PLUS', 'INT_CONS', 'SEMICOLON', 'END', 'SEMICOLON',
+                           'VAR', 'NAME', 'DCOLON', 'ARRAY', 'LSQUARE',
+                           'INT_CONS', 'RSQUARE', 'OF', 'CHAR', 'SEMICOLON',
+                           'PROCEDURE', 'NAME', 'LPAREN', 'VAR', 'NAME',
+                           'DCOLON', 'ARRAY', 'OF', 'CHAR', 'RPAREN',
                            'SEMICOLON', 'VAR', 'NAME', 'COMMA', 'NAME',
                            'DCOLON', 'INTEGER', 'SEMICOLON', 'BEGIN', 'NAME',
                            'SET', 'NAME', 'LPAREN', 'NAME', 'RPAREN',
                            'SEMICOLON', 'NAME', 'SET', 'INT_CONS', 'SEMICOLON',
                            'WHILE', 'NAME', 'LT', 'NAME', 'DO', 'BEGIN',
-                           'NAME', 'LSQUARE', 'NAME', 'RSQUARE', 'SET',
-                           'NAME', 'LSQUARE', 'NAME', 'MINUS', 'NAME',
-                           'MINUS', 'INT_CONS', 'RSQUARE', 'SEMICOLON', 'NAME',
-                           'SET', 'NAME', 'PLUS', 'INT_CONS', 'END',
+                           'NAME', 'LSQUARE', 'NAME', 'RSQUARE', 'SET', 'NAME',
+                           'LSQUARE', 'NAME', 'MINUS', 'NAME', 'MINUS',
+                           'INT_CONS', 'RSQUARE', 'SEMICOLON', 'NAME', 'SET',
+                           'NAME', 'PLUS', 'INT_CONS', 'SEMICOLON', 'END',
                            'SEMICOLON', 'NAME', 'LSQUARE', 'NAME', 'RSQUARE',
-                           'SET', 'STRING', 'END', 'SEMICOLON', 'BEGIN',
-                           'NAME', 'LPAREN', 'STRING', 'RPAREN', 'SEMICOLON',
-                           'NAME', 'LPAREN', 'NAME', 'RPAREN', 'END', 'COLON'])
+                           'SET', 'CHARACTER', 'SEMICOLON', 'END', 'SEMICOLON',
+                           'BEGIN', 'NAME', 'LPAREN', 'STRING', 'RPAREN',
+                           'SEMICOLON', 'NAME', 'LPAREN', 'NAME', 'RPAREN',
+                           'END', 'COLON'])
+
 
 def test_reals():
     s = '''
