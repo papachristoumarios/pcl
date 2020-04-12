@@ -40,13 +40,13 @@ class NameType(Enum):
     N_FORWARD = 'n_forward' # forward header declaration (declare that function is recursive (in header))
     N_FORMAL = 'n_formal'
 
-
-
 class SymbolEntry:
     def __init__(self, stype, name_type):
         self.stype = stype
         self.name_type = name_type
         self.offset = None
+        self.num_queries = 0
+
 
 builtins = [('writeInteger',
              SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_PROC),
@@ -60,9 +60,8 @@ builtins = [('writeInteger',
             ('writeChar',
              SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_PROC),
                          name_type=NameType.N_PROCEDURE)),
-
-
            ]
+
 
 
 
@@ -110,6 +109,7 @@ class SymbolTable:
     def __init__(self):
         self.scopes = deque([])
         self.formals = deque([])
+        self.scope_names_indices = deque([])
 
         # scope for builtins
         self.open_scope()
@@ -135,11 +135,15 @@ class SymbolTable:
         formal = FormalScope(name=name, offset=ofs_formal)
         self.scopes.append(scope)
         self.formals.append(formal)
+        if name is not None:
+            self.scope_names_indices.append(len(self.scopes) - 1)
         return scope
 
     def close_scope(self):
         if len(self.scopes) == 0:
             raise PCLSymbolTableError('Tried to pop nonexistent scope')
+        if self.scopes[-1].name is not None:
+            self.scope_names_indices.pop()
         self.scopes.pop()
         self.formals.pop()
 
@@ -150,11 +154,13 @@ class SymbolTable:
         if last_scope:
             entry = self.scopes[-1].lookup(c)
             if entry:
+                entry.num_queries += 1
                 return entry
         else:
             for scope in reversed(self.scopes):
                 entry = scope.lookup(c)
                 if entry:
+                    entry.num_queries += 1
                     return entry
 
         msg = 'Unknown name: {}'.format(c)
@@ -196,7 +202,10 @@ class SymbolTable:
                     yield elem
 
     def needs_forward_declaration(self, header):
-        if self.scopes[-1].name == header:
+        if len(self.scope_names_indices) == 0:
+            return
+        scope_index = self.scope_names_indices[-1]
+        if self.scopes[scope_index].name == header:
             try:
                 self.lookup('forward_' + header)
             except PCLSymbolTableError:

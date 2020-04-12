@@ -316,6 +316,8 @@ class Block(Statement):
         self.stmt_list = stmt_list
 
     def sem(self):
+        # TODO scoping here?
+
         for stmt in self.stmt_list:
             stmt.sem()
 
