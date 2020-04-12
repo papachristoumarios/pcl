@@ -1,0 +1,6 @@
+program array1;
+    var x: array [2] of integer;
+    var y: array of integer;
+begin
+    x := y;
+end.
