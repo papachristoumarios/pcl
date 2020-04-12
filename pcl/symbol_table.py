@@ -197,7 +197,11 @@ class SymbolTable:
 
     def needs_forward_declaration(self, header):
         if self.scopes[-1].name == header:
-            self.lookup('forward_' + header)
+            try:
+                self.lookup('forward_' + header)
+            except PCLSymbolTableError:
+                msg = 'Expected forward declaration for header: {}'.format(header)
+                raise PCLSymbolTableError(msg)
 
 if __name__ == '__main__':
     pass

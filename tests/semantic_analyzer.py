@@ -2,50 +2,52 @@ import os
 import pytest
 from pcl import PCLParser as Parser
 from pcl import PCLLexer as Lexer
-from pcl import PCLError, PCLSemError, PCLParserError
+from pcl import PCLError, PCLSemError, PCLParserError, PCLSymbolTableError
 import glob
 import logging
 lexer = Lexer()
 parser = Parser()
 
 
-valid_examples = []
 pos_examples_folder = '../examples/pos/'
-
-invalid_examples = []
 neg_examples_folder = '../examples/neg/'
 
-for filename in glob.iglob(os.path.join(pos_examples_folder, "*.pcl")):
-    with open(filename, 'r') as f:
-        valid_examples.append(f.read())
+valid_examples = glob.iglob(os.path.join(pos_examples_folder, "*.pcl"))
 
-for filename in glob.iglob(os.path.join(neg_examples_folder, "*.pcl")):
-    with open(filename, 'r') as f:
-        invalid_examples.append(f.read())
+invalid_examples = glob.iglob(os.path.join(neg_examples_folder, "*.pcl"))
 
 
 
-@pytest.mark.parametrize("example", valid_examples)
-def test_valid(example):
+@pytest.mark.parametrize("filename", valid_examples)
+def test_valid(filename):
+    print('Running example: {}'.format(filename))
+    with open(filename) as f:
+        example = f.read()
     if example == '':
         return
-    print('Running example: {}'.format(example))
     tokens = lexer.tokenize(example)
     program = parser.parse(tokens)
     program.pipeline()
 
-@pytest.mark.parametrize("example", invalid_examples)
-def test_invalid(example):
+@pytest.mark.parametrize("filename", invalid_examples)
+def test_invalid(filename):
+    print('Running example: {}'.format(filename))
+    with open(filename) as f:
+        example = f.read()
     if example == '':
         return
-    print('Running example: {}'.format(example))
     try:
         tokens = lexer.tokenize(example)
         program = parser.parse(tokens)
         program.sem()
         assert 1 == 0, 'Negative program passed'
-    except PCLError as e:
+        print(example)
+    except PCLSemError as e:
         print(e)
+    except PCLSymbolTableError as e:
+        print(e)
+    except PCLError as e:
+        raise e
 
 if __name__ == '__main__':
     pytest.main(args=[os.path.abspath(__file__)])
