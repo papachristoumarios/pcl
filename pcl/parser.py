@@ -485,7 +485,7 @@ if __name__ == '__main__':
 
     s = '''
     program foo;
-        var x: array of integer;
+        var x: array [10] of ^integer;
     begin
     end.
     '''
@@ -499,3 +499,5 @@ if __name__ == '__main__':
     program.codegen()
     program.pprint()
     program.print_module()
+
+    parser.codegen.generate_outputs('toy')

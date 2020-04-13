@@ -264,7 +264,7 @@ class Forward(Local):
                 self.symbol_table.insert_formal('forward_'+ self.header.id_, formal_id, formal_entry)
 
     def codegen(self):
-        pass            
+        pass
 
 class Header(AST):
     def __init__(

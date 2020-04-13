@@ -57,7 +57,8 @@ class PCLCodegen:
         self.binding.initialize_native_asmprinter()
         self._config_llvm()
         self._create_execution_engine()
-        self._declare_print_function()
+        self._declare_printf()
+        self._declare_scanf()
 
     def _config_llvm(self):
         self.module = ir.Module(name='example')
@@ -80,12 +81,15 @@ class PCLCodegen:
         engine = binding.create_mcjit_compiler(backing_mod, target_machine)
         self.engine = engine
 
-    def _declare_print_function(self):
-        # Declare Printf function
+    def _declare_printf(self):
         voidptr_ty = ir.IntType(8).as_pointer()
         printf_ty = ir.FunctionType(ir.IntType(32), [voidptr_ty], var_arg=True)
-        printf = ir.Function(self.module, printf_ty, name="printf")
-        self.printf = printf
+        self.printf = ir.Function(self.module, printf_ty, name="printf")
+
+    def _declare_scanf(self):
+        voidptr_ty = ir.IntType(8).as_pointer()
+        scanf_ty = ir.FunctionType(ir.IntType(32), [voidptr_ty], var_arg=True)
+        self.scanf = ir.Function(self.module, scanf_ty, name="scanf")
 
     def _compile_ir(self):
         """
@@ -103,17 +107,8 @@ class PCLCodegen:
         self.engine.run_static_constructors()
         return mod
 
-    def _optimize_ir(self):
-        self.module_ref = binding.parse_assembly(str(self.module))
-        self.module_pass_manager = binding.ModulePassManager()
-        self.module_pass_manager.run(self.module_ref)
-
-
-    def create_ir(self):
-        self._compile_ir()
-        self._optimize_ir()
-
     def generate_outputs(self, filename):
+        self._compile_ir()
         final_code = str(self.module)
         llvm_filename = filename + '.ll'
         obj_filename = filename + '.o'
