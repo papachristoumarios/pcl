@@ -203,6 +203,10 @@ class VarList(Local):
         for var in self.vars_:
             var.sem()
 
+    def codegen(self):
+        for var in self.vars_:
+            var.codegen()
+
 class Var(Local):
     def __init__(self, ids, type_, builder, module, symbol_table):
         super(Var, self).__init__(builder, module, symbol_table)
@@ -216,6 +220,13 @@ class Var(Local):
             var_entry = SymbolEntry(stype=self.type_.stype, name_type=NameType.N_VAR)
             self.symbol_table.insert(id_, var_entry)
 
+    def codegen(self):
+        self.type_.codegen()
+
+        for id_ in self.ids:
+            id_cvalue = self.builder.alloca(self.type_.cvalue)
+            var_entry = SymbolEntry(stype=self.type_.stype, name_type=NameType.N_VAR, cvalue=id_cvalue)
+            self.symbol_table.insert(id_, var_entry)
 
 class Label(Local):
     def __init__(self, ids, builder, module, symbol_table):
@@ -252,6 +263,8 @@ class Forward(Local):
                 formal_entry = SymbolEntry(stype=formal.stype, name_type=NameType.N_FORMAL)
                 self.symbol_table.insert_formal('forward_'+ self.header.id_, formal_id, formal_entry)
 
+    def codegen(self):
+        pass            
 
 class Header(AST):
     def __init__(
@@ -304,8 +317,6 @@ class Type(AST):
     def codegen(self):
         self.cvalue = LLVMTypes.mapping[self.type_]
 
-
-
 class PointerType(Type):
     '''
         Declaration of a new pointer.
@@ -317,9 +328,13 @@ class PointerType(Type):
         self.type_ = type_
 
     def sem(self):
+        self.type_.sem()
         base_type = self.type_.stype
         self.stype = (ComposerType.T_PTR, base_type)
 
+    def codegen(self):
+        self.type_.codegen()
+        self.cvalue = ir.PointerType(self.type_.cvalue)
 
 class ArrayType(Type):
 
@@ -336,6 +351,12 @@ class ArrayType(Type):
         else:
             raise PCLSemError('Negative length')
 
+    def codegen(self):
+        self.type_.codegen()
+        if self.length > 0:
+            self.cvalue = ir.ArrayType(self.type_.cvalue, self.length)
+        elif self.length == 0:
+            self.cvalue = ir.PointerType(self.type_.cvalue)
 
 class Statement(AST):
 
@@ -902,6 +923,9 @@ class NameLValue(LValue):
         result = self.symbol_table.lookup(self.id_)
         self.stype = result.stype
 
+    def codegen(self):
+        result = self.symbol_table.lookup(self.id_).cvalue
+        self.cvalue = self.builder.load(result)
 
 class Result(LValue):
     '''
@@ -978,7 +1002,13 @@ class SetExpression(LValue):
         else:
             raise PCLSemError('Invalid set expression {} := {}'.format(self.lvalue.stype, self.expr.stype))
 
+    def codegen(self):
+        self.expr.codegen()
+        self.lvalue.codegen()
 
+        if hasattr(self.lvalue, 'id_'):
+            result = self.symbol_table.lookup(self.lvalue.id_).cvalue
+            self.builder.store(self.expr.cvalue, result)
 
 class LBrack(LValue):
     '''

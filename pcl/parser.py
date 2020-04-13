@@ -485,9 +485,8 @@ if __name__ == '__main__':
 
     s = '''
     program foo;
-    label x;
+        var x: array of integer;
     begin
-        if 3 > 3 then ;
     end.
     '''
 
