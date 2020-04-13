@@ -43,7 +43,7 @@ def get_argparser():
     )
     return argparser
 
-class PCLCDriver: 
+class PCLCDriver:
 
     def __init__(self, program):
         self.program = program
@@ -88,7 +88,7 @@ if __name__ == '__main__':
 
     driver = PCLCDriver(program)
 
-    pipeline = ['lex', 'parse', 'sem', 'pprint', 'print_module']
+    pipeline = ['lex', 'parse', 'sem', 'pprint', 'codegen', 'print_module']
 
 
     pipeline_funcs = {
@@ -96,6 +96,7 @@ if __name__ == '__main__':
         'parse' : driver.parse,
         'sem' : driver.sem,
         'pprint' : driver.pprint,
+        'codegen' : driver.codegen,
         'print_module': driver.print_module
     }
 

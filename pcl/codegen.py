@@ -1,10 +1,9 @@
 from ctypes import CFUNCTYPE, c_double
 from llvmlite import ir, binding
 from pcl.error import PCLCodegenError
-from enum import Enum
 import os
 
-class LLVMTypeSize(Enum):
+class LLVMTypeSize:
     T_BOOL = 1
     T_CHAR = 1
     T_REAL = 10
@@ -16,6 +15,21 @@ class LLVMTypeSize(Enum):
         if n <= 0:
             raise PCLCodegenError('Allocating array with non-positive number of elements')
         return n * t.value
+
+class LLVMTypes:
+    T_INT = ir.IntType(LLVMTypeSize.T_INT)
+    T_BOOL = ir.IntType(LLVMTypeSize.T_BOOL)
+    T_CHAR = ir.IntType(LLVMTypeSize.T_CHAR)
+    T_PROC = ir.VoidType()
+    T_PTR = ir.PointerType(LLVMTypeSize.T_PTR)
+    T_REAL = ir.DoubleType()
+
+    mapping = {
+        'integer' : T_INT,
+        'bool' : T_BOOL,
+        'real' : T_REAL,
+        'char' : T_CHAR
+    }
 
 
 class PCLCodegen:

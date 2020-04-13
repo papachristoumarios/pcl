@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from collections import deque
 from pcl.error import PCLParserError, PCLSemError, PCLCodegenError
 from pcl.symbol_table import *
+from pcl.codegen import LLVMTypes, LLVMTypeSize
 
 class AST(ABC):
     '''
@@ -16,12 +17,21 @@ class AST(ABC):
                 module: LLVM module
                 symbol_table: The symbol table
         '''
+        # LLVM Builder
         self.builder = builder
+
+        # LLVM Module
         self.module = module
+
+        # Reference to global symbol table
         self.symbol_table = symbol_table
+
+        # Semantic type. If set, it is represented by (composer, stype_)
         self.stype = None
 
-    # TODO add @abstractmethod
+        # LLVM Value for codegen
+        self.cvalue = None
+
     def eval(self):
         pass
 
@@ -98,6 +108,15 @@ class Program(AST):
         # Close main scope
         self.symbol_table.close_scope()
 
+    def codegen(self):
+        # Open program scope
+        self.symbol_table.open_scope()
+
+        # Run codegen on body
+        self.body.codegen()
+
+        # Close scope
+        self.symbol_table.close_scope()
 
 class Body(AST):
 
@@ -113,6 +132,13 @@ class Body(AST):
 
         # Run sem to block
         self.block.sem()
+
+    def codegen(self):
+        # Run codegen to locals
+        for local in self.locals_:
+            local.codegen()
+
+        self.block.codegen()
 
 class Local(AST):
     def __init__(self, builder, module, symbol_table):
@@ -269,6 +295,10 @@ class Type(AST):
     def sem(self):
         self.stype = (ComposerType.T_NO_COMP, BaseType(self.type_))
 
+    def codegen(self):
+        self.value = LLVMTypes.mapping[self.type_]
+        return self.value
+
 
 class PointerType(Type):
     '''
@@ -319,10 +349,12 @@ class Block(Statement):
         self.stmt_list = stmt_list
 
     def sem(self):
-        # TODO scoping here?
-
         for stmt in self.stmt_list:
             stmt.sem()
+
+    def codegen(self):
+        for stmt in self.stmt_list:
+            stmt.codegen()
 
 
 class Call(Statement):
