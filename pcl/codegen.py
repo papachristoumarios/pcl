@@ -31,6 +31,9 @@ class LLVMTypes:
         'char' : T_CHAR
     }
 
+class LLVMConstants:
+    ZERO_INT = ir.Constant(LLVMTypes.T_INT, 0)
+    ZERO_REAL = ir.Constant(LLVMTypes.T_REAL, 0)
 
 class PCLCodegen:
 

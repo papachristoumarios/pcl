@@ -1,9 +1,11 @@
 import json
 from abc import ABC, abstractmethod
 from collections import deque
+from llvmlite import ir, binding
+
 from pcl.error import PCLParserError, PCLSemError, PCLCodegenError
 from pcl.symbol_table import *
-from pcl.codegen import LLVMTypes, LLVMTypeSize
+from pcl.codegen import LLVMTypes, LLVMTypeSize, LLVMConstants
 
 class AST(ABC):
     '''
@@ -296,8 +298,8 @@ class Type(AST):
         self.stype = (ComposerType.T_NO_COMP, BaseType(self.type_))
 
     def codegen(self):
-        self.value = LLVMTypes.mapping[self.type_]
-        return self.value
+        self.cvalue = LLVMTypes.mapping[self.type_]
+
 
 
 class PointerType(Type):
@@ -544,6 +546,9 @@ class IntegerConst(RValue):
     def sem(self):
         self.stype = (ComposerType.T_NO_COMP, BaseType.T_INT)
 
+    def codegen(self):
+        self.cvalue = ir.Constant(LLVMTypes.T_INT, self.value)
+
 
 class RealConst(RValue):
     '''
@@ -557,6 +562,9 @@ class RealConst(RValue):
     def sem(self):
         self.stype = (ComposerType.T_NO_COMP, BaseType.T_REAL)
 
+    def codegen(self):
+        self.cvalue = ir.Constant(LLVMTypes.T_REAL, self.value)
+
 
 class CharConst(RValue):
     '''
@@ -565,11 +573,13 @@ class CharConst(RValue):
 
     def __init__(self, value, builder, module, symbol_table):
         super(CharConst, self).__init__(builder, module, symbol_table)
-        assert(len(value) == 1)
-        self.value = value
+        self.value = ord(value)
 
     def sem(self):
         self.stype = (ComposerType.T_NO_COMP, BaseType.T_CHAR)
+
+    def codegen(self):
+        self.cvalue = ir.Constant(LLVMTypes.T_CHAR, self.value)
 
 
 class BoolConst(RValue):
@@ -579,10 +589,13 @@ class BoolConst(RValue):
 
     def __init__(self, value, builder, module, symbol_table):
         super(BoolConst, self).__init__(builder, module, symbol_table)
-        self.value = value
+        self.value = int(value == 'true')
 
     def sem(self):
         self.stype = (ComposerType.T_NO_COMP, BaseType.T_BOOL)
+
+    def codegen(self):
+        self.cvalue = ir.Constant(LLVMTypes.T_BOOL, self.value)
 
 
 class Ref(RValue):
@@ -627,6 +640,17 @@ class ArUnOp(RValue):
         self.rhs.type_check(arithmetic_types)
         self.stype = self.rhs.stype
 
+    def codegen(self):
+        self.rhs.codegen()
+
+        if self.op == '+':
+            self.cvalue = self.rhs.cvalue
+        elif self.op == '-':
+            if self.stype[1] == BaseType.T_INT:
+                self.cvalue = self.builder.neg(self.rhs.cvalue)
+            elif self.stype[1] == BaseType.T_REAL:
+                self.cvalue = self.builder.fsub(LLVMConstants.ZERO_REAL, self.rhs.cvalue)
+
 class LogicUnOp(RValue):
     '''
         Unary operator. +x, -x
@@ -642,6 +666,9 @@ class LogicUnOp(RValue):
         self.rhs.type_check((ComposerType.T_NO_COMP, BaseType.T_BOOL))
         self.stype = self.rhs.stype
 
+    def codegen(self):
+        self.rhs.codegen()
+        self.cvalue = self.builder.not_(self.rhs.cvalue)
 
 class ArOp(RValue):
     '''
