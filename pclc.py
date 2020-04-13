@@ -88,7 +88,7 @@ if __name__ == '__main__':
 
     driver = PCLCDriver(program)
 
-    pipeline = ['lex', 'parse', 'sem', 'pprint', 'codegen', 'print_module']
+    pipeline = ['lex', 'parse', 'sem', 'pprint', 'print_module', 'pprint']
 
 
     pipeline_funcs = {

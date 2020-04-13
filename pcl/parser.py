@@ -284,7 +284,7 @@ class PCLParser(Parser):
 
     @_('NAME DCOLON stmt')
     def stmt(self, p):
-        return Statement(name=p.NAME, builder=self.builder, module=self.module,
+        return Statement(name=p.NAME, stmt=p.stmt, builder=self.builder, module=self.module,
                          symbol_table=self.symbol_table)
 
 
@@ -485,13 +485,9 @@ if __name__ == '__main__':
 
     s = '''
     program foo;
-    function f(var x: integer) : integer;
+    label x;
     begin
-        result := 1;
-    end;
-
-    begin
-        f(3.5);
+        if 3 > 3 then ;
     end.
     '''
 
@@ -501,4 +497,6 @@ if __name__ == '__main__':
     # tokens = lexer.tokenize(s)
     program = parser.parse(iter(tokens))
     program.sem()
+    program.codegen()
     program.pprint()
+    program.print_module()

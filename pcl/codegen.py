@@ -35,6 +35,19 @@ class LLVMConstants:
     ZERO_INT = ir.Constant(LLVMTypes.T_INT, 0)
     ZERO_REAL = ir.Constant(LLVMTypes.T_REAL, 0)
 
+class LLVMOperators:
+
+    # Accessible with comp_mapping.get(x, x)
+    comp_mapping = {
+        '=' : '==',
+        '<>' : '!=',
+    }
+
+    @staticmethod
+    def get_op(op):
+        return LLVMOperators.comp_mapping.get(op, op)
+
+
 class PCLCodegen:
 
     def __init__(self):

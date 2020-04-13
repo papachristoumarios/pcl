@@ -5,7 +5,7 @@ from llvmlite import ir, binding
 
 from pcl.error import PCLParserError, PCLSemError, PCLCodegenError
 from pcl.symbol_table import *
-from pcl.codegen import LLVMTypes, LLVMTypeSize, LLVMConstants
+from pcl.codegen import *
 
 class AST(ABC):
     '''
@@ -38,10 +38,12 @@ class AST(ABC):
         pass
 
     def sem(self):
-        raise NotImplementedError('sem method not implemented for this node')
+        msg = 'sem method not implemented for {}'.format(self.__class__.__name__)
+        raise NotImplementedError(msg)
 
     def codegen(self):
-        pass
+        msg = 'codegen method not implemented for {}'.format(self.__class__.__name__)
+        raise NotImplementedError(msg)
 
     def pipeline(self, *stages):
         for stage in stages:
@@ -226,6 +228,8 @@ class Label(Local):
             label_entry = SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_LABEL), name_type=NameType.N_LABEL)
             self.symbol_table.insert(id_, label_entry)
 
+    def codegen(self):
+        pass
 
 class Forward(Local):
 
@@ -338,11 +342,19 @@ class Statement(AST):
     def __init__(self, builder, module, symbol_table, **kwargs):
         super(Statement, self).__init__(builder, module, symbol_table)
         self.name = kwargs.get('name', None)
+        self.stmt = kwargs.get('stmt', None)
 
     def sem(self):
         if self.name:
             self.symbol_table.lookup(self.name)
+            self.stmt.sem()
 
+    def codegen(self):
+        if self.name:
+            self.cvalue = self.builder.append_basic_block(self.name)
+            label_entry = SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_LABEL), name_type=NameType.N_LABEL, cvalue=self.cvalue)
+            self.symbol_table.insert(self.name, label_entry)
+            self.stmt.codegen()
 
 class Block(Statement):
 
@@ -408,6 +420,18 @@ class If(Statement):
         if self.else_stmt:
             self.else_stmt.sem()
 
+    def codegen(self):
+        self.expr.codegen()
+
+        if self.else_stmt:
+            with self.builder.if_else(self.expr.cvalue) as (then, otherwise):
+                with then:
+                    self.stmt.codegen()
+                with otherwise:
+                    self.else_stmt.codegen()
+        else:
+            with self.builder.if_then(self.expr.cvalue):
+                self.stmt.codegen()
 
 class While(Statement):
     '''
@@ -424,6 +448,16 @@ class While(Statement):
         self.expr.type_check((ComposerType.T_NO_COMP, BaseType.T_BOOL))
         self.stmt.sem()
 
+    def codegen(self):
+        w_body_block = self.builder.append_basic_block()
+        w_after_block = self.builder.append_basic_block()
+        self.expr.codegen()
+        self.builder.cbranch(self.expr.cvalue, w_body_block, w_after_block)
+        self.builder.position_at_start(w_body_block)
+        self.stmt.codegen()
+        self.builder.cbranch(self.expr.cvalue, w_body_block, w_after_block)
+        self.builder.position_at_start(w_after_block)
+
 
 class Goto(Statement):
     '''
@@ -437,6 +471,9 @@ class Goto(Statement):
     def sem(self):
         self.symbol_table.lookup(self.id_, last_scope=True)
 
+    def codegen(self):
+        goto_block = self.symbol_table.lookup(self.id_).cvalue
+        self.builder.branch(goto_block)
 
 class Return(Statement):
     '''
@@ -451,6 +488,9 @@ class Empty(Statement):
         Empty Statement.
     '''
     def sem(self):
+        pass
+
+    def codegen(self):
         pass
 
 
@@ -533,7 +573,6 @@ class RValue(Expr):
 
         super(RValue, self).type_check(target, *args)
 
-
 class IntegerConst(RValue):
     '''
         Integer constant. Holds integer numbers.
@@ -548,7 +587,6 @@ class IntegerConst(RValue):
 
     def codegen(self):
         self.cvalue = ir.Constant(LLVMTypes.T_INT, self.value)
-
 
 class RealConst(RValue):
     '''
@@ -688,9 +726,6 @@ class ArOp(RValue):
         self.lhs.type_check(arithmetic_types)
         self.rhs.type_check(arithmetic_types)
 
-        real_type = (ComposerType.T_NO_COMP, BaseType.T_REAL)
-        int_type = (ComposerType.T_NO_COMP, BaseType.T_INT)
-
         if self.op == '/':
             self.stype = real_type
             return
@@ -705,6 +740,45 @@ class ArOp(RValue):
 
         self.stype = int_type
 
+    def codegen(self):
+        self.lhs.codegen()
+        self.rhs.codegen()
+
+        if self.lhs.stype == real_type and self.rhs.stype == int_type:
+            lhs_cvalue = self.lhs.cvalue
+            rhs_cvalue = self.builder.sitofp(self.rhs.cvalue, LLVMTypes.T_REAL)
+        elif self.lhs.stype == int_type and self.rhs.stype == real_type:
+            lhs_cvalue = self.builder.sitofp(self.lhs.cvalue, LLVMTypes.T_REAL)
+            rhs_cvalue = self.rhs.cvalue
+        elif self.op == '/':
+            lhs_cvalue = self.builder.sitofp(self.lhs.cvalue, LLVMTypes.T_REAL)
+            rhs_cvalue = self.builder.sitofp(self.rhs.cvalue, LLVMTypes.T_REAL)
+        else:
+            lhs_cvalue = self.lhs.cvalue
+            rhs_cvalue = self.rhs.cvalue
+
+        if self.lhs.stype == int_type and self.rhs.stype == int_type:
+            if self.op == '+':
+                self.cvalue = self.builder.add(lhs_cvalue, rhs_cvalue)
+            elif self.op == '-':
+                self.cvalue = self.builder.sub(lhs_cvalue, rhs_cvalue)
+            elif self.op == '*':
+                self.cvalue = self.builder.mul(lhs_cvalue, rhs_cvalue)
+            elif self.op == '/':
+                self.cvalue = self.builder.fdiv(lhs_cvalue, rhs_cvalue)
+            elif self.op == 'div':
+                self.cvalue = self.builder.sdiv(lhs_cvalue, rhs_cvalue)
+            elif self.op == 'mod':
+                self.cvalue = self.builder.srem(lhs_cvalue, rhs_cvalue)
+        else:
+            if self.op == '+':
+                self.cvalue = self.builder.fadd(lhs_cvalue, rhs_cvalue)
+            elif self.op == '-':
+                self.cvalue = self.builder.fsub(lhs_cvalue, rhs_cvalue)
+            elif self.op == '*':
+                self.cvalue = self.builder.fmul(lhs_cvalue, rhs_cvalue)
+            elif self.op == '/':
+                self.cvalue = self.builder.fdiv(lhs_cvalue, rhs_cvalue)
 
 class CompOp(RValue):
     '''
@@ -732,6 +806,32 @@ class CompOp(RValue):
 
         self.stype = (ComposerType.T_NO_COMP, BaseType.T_BOOL)
 
+    def codegen(self):
+        self.lhs.codegen()
+        self.rhs.codegen()
+
+        arithmetic = (self.lhs.stype in arithmetic_types) and (self.rhs.stype in arithmetic_types)
+
+        # TODO ADD ARRAY COMPARISON
+        if arithmetic:
+            if self.lhs.stype == real_type and self.rhs.stype == int_type:
+                lhs_cvalue = self.lhs.cvalue
+                rhs_cvalue = self.builder.sitofp(self.rhs.cvalue, LLVMTypes.T_REAL)
+            elif self.lhs.stype == int_type and self.rhs.stype == real_type:
+                lhs_cvalue = self.builder.sitofp(self.lhs.cvalue, LLVMTypes.T_REAL)
+                rhs_cvalue = self.rhs.cvalue
+            else:
+                lhs_cvalue = self.lhs.cvalue
+                rhs_cvalue = self.rhs.cvalue
+
+            cmp_op = LLVMOperators.get_op(self.op)
+
+            if self.lhs.stype == int_type and self.rhs.stype == int_type:
+                self.cvalue = self.builder.icmp_signed(cmp_op, lhs_cvalue, rhs_cvalue)
+            else:
+                self.cvalue = self.builder.fcmp_ordered(cmp_op, lhs_cvalue, rhs_cvalue)
+
+
 
 class LogicOp(RValue):
     '''
@@ -754,6 +854,14 @@ class LogicOp(RValue):
 
         self.stype = bool_type
 
+    def codegen(self):
+        self.lhs.codegen()
+        self.rhs.codegen()
+
+        if self.op == 'and':
+            self.cvalue = self.builder.and_(self.lhs.cvalue, self.rhs.cvalue)
+        elif self.op == 'or':
+            self.cvalue = self.builder.or_(self.lhs.cvalue, self.rhs.cvalue)
 
 
 class AddressOf(RValue):
@@ -807,6 +915,7 @@ class Result(LValue):
         result = self.symbol_table.lookup('result')
         self.stype = result.stype
 
+
 class StringLiteral(LValue):
     '''
         Holds a node for a string literal
@@ -815,10 +924,13 @@ class StringLiteral(LValue):
     def __init__(self, literal, builder, module, symbol_table):
         super(StringLiteral, self).__init__(builder, module, symbol_table)
         self.literal = literal
+        self.length = len(self.literal)
 
     def sem(self):
         self.stype = (ComposerType.T_CONST_ARRAY, (ComposerType.T_NO_COMP, BaseType.T_CHAR))
 
+    def codegen(self):
+        self.cvalue = ir.Constant(ir.ArrayType(LLVMTypes.T_CHAR, self.length), bytearray(self.literal.encode("utf8")))
 
 class Deref(LValue):
     '''

@@ -26,6 +26,8 @@ def is_composite(stype):
 
 arithmetic_types = [(ComposerType.T_NO_COMP, BaseType.T_INT),
                          (ComposerType.T_NO_COMP, BaseType.T_REAL)]
+real_type = (ComposerType.T_NO_COMP, BaseType.T_REAL)
+int_type = (ComposerType.T_NO_COMP, BaseType.T_INT)
 
 
 class MetaType:
@@ -41,12 +43,12 @@ class NameType(Enum):
     N_FORMAL = 'n_formal'
 
 class SymbolEntry:
-    def __init__(self, stype, name_type):
+    def __init__(self, stype, name_type, cvalue=None):
         self.stype = stype
         self.name_type = name_type
         self.offset = None
         self.num_queries = 0
-
+        self.cvalue = cvalue
 
 builtins = [('writeInteger',
              SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_PROC),
