@@ -1,10 +1,10 @@
 import argparse
 import sys
 
-from pcl.error import PCLCError
-from pcl.lexer import PCLLexer
-from pcl.parser import PCLParser
-from pcl.codegen import PCLCodegen
+from pcl import PCLCError
+from pcl import PCLLexer
+from pcl import PCLParser
+from pcl import PCLCodegen
 
 __version__ = '0.0.1'
 
@@ -43,6 +43,30 @@ def get_argparser():
     )
     return argparser
 
+class PCLCDriver: 
+
+    def __init__(self, program):
+        self.program = program
+        self.lexer = PCLLexer()
+        self.parser = PCLParser()
+
+    def lex(self):
+        self.tokens = self.lexer.tokenize(self.program)
+
+    def parse(self):
+        self.parsed = self.parser.parse(self.tokens)
+
+    def pprint(self):
+        self.parsed.pprint()
+
+    def sem(self):
+        self.parsed.sem()
+
+    def codegen(self):
+        self.parsed.codegen()
+
+    def print_module(self):
+        self.parsed.print_module()
 
 if __name__ == '__main__':
     argparser = get_argparser()
@@ -62,29 +86,24 @@ if __name__ == '__main__':
             raise PCLCError('Multiple Inputs defined')
             exit(1)
 
-    lexer = PCLLexer()
-    parser = PCLParser()
+    driver = PCLCDriver(program)
 
-    pipeline = ['lex']
+    pipeline = ['lex', 'parse', 'sem', 'pprint', 'print_module']
 
 
     pipeline_funcs = {
-        'lex' : lexer.tokenize,
-        'parse' : parser.parse
+        'lex' : driver.lex,
+        'parse' : driver.parse,
+        'sem' : driver.sem,
+        'pprint' : driver.pprint,
+        'print_module': driver.print_module
     }
 
 
-    program_stage = {-1: program}
-
-    for component in pipeline:
-        program_stage[component] = pipeline_funcs[component](program)
-        program = program_stage[component]
-        # verbose for now
-        print(str(list(program)))
-
+    for stage in pipeline:
+        pipeline_funcs[stage]()
 
     if args.f ^ args.i:
-        print(str(list(program)))
         exit(0)
 
     exit(0)
