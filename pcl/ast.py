@@ -53,6 +53,9 @@ class AST(ABC):
             self.__class__.__name__, target, self.stype, ' '.join(args))
         raise PCLSemError(msg)
 
+    def print_module(self):
+        print(str(self.module))
+
     def pprint(self, indent=0):
         '''
             Pretty printing of a node's contents and
