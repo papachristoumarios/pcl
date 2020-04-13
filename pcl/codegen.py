@@ -4,7 +4,7 @@ from pcl.error import PCLCodegenError
 from enum import Enum
 import os
 
-class TypeSize(Enum):
+class LLVMTypeSize(Enum):
     T_BOOL = 1
     T_CHAR = 1
     T_REAL = 10
