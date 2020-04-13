@@ -78,7 +78,6 @@ class PCLLexer(Lexer):
         CHARACTER,
         NAME,
         STRING,
-        NEWLINE
     } | set(keywords.values())
 
     # Ignore multiline comments
