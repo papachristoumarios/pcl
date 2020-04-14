@@ -28,9 +28,9 @@ class PCLParser(Parser):
         self.comp = ['>=', '<=', '>', '<', '=', '<>']
         self.logical = ['and', 'or', 'not']
         self.codegen = PCLCodegen()
-        self.symbol_table = SymbolTable()
         self.builder = self.codegen.builder
         self.module = self.codegen.module
+        self.symbol_table = SymbolTable(self.module)
 
         self.the_nil = Nil(
             builder=self.builder,
@@ -156,18 +156,27 @@ class PCLParser(Parser):
 
     @_('VAR id_list DCOLON vartype')
     def formal(self, p):
-        return Formal(ids=p.id_list, type_=p.vartype, by_reference=False, builder=self.builder,
-                      module=self.module, symbol_table=self.symbol_table)
+        return Formal(
+            ids=p.id_list,
+            type_=p.vartype,
+            by_reference=False,
+            builder=self.builder,
+            module=self.module,
+            symbol_table=self.symbol_table)
 
     @_('id_list DCOLON vartype')
     def formal(self, p):
-        return Formal(ids=p.id_list, type_=p.vartype, by_reference=True, builder=self.builder,
-                      module=self.module, symbol_table=self.symbol_table)
-
+        return Formal(
+            ids=p.id_list,
+            type_=p.vartype,
+            by_reference=True,
+            builder=self.builder,
+            module=self.module,
+            symbol_table=self.symbol_table)
 
     @_('formal semicolon_formal_list')
     def formal_list(self, p):
-        p.semicolon_formal_list.append(p.formal)
+        p.semicolon_formal_list.appendleft(p.formal)
         return p.semicolon_formal_list
 
     @_('')
@@ -256,7 +265,6 @@ class PCLParser(Parser):
         return Dispose(lvalue=p.lvalue, brackets=True, builder=self.builder,
                        module=self.module, symbol_table=self.symbol_table)
 
-
     @_('RETURN')
     def stmt(self, p):
         return Return(
@@ -273,9 +281,6 @@ class PCLParser(Parser):
     def stmt(self, p):
         return While(expr=p.expr, stmt=p.stmt, builder=self.builder,
                      module=self.module, symbol_table=self.symbol_table)
-
-
-
 
     @_('IF expr THEN stmt else_stmt')
     def stmt(self, p):
@@ -294,9 +299,12 @@ class PCLParser(Parser):
 
     @_('NAME DCOLON stmt')
     def stmt(self, p):
-        return Statement(name=p.NAME, stmt=p.stmt, builder=self.builder, module=self.module,
-                         symbol_table=self.symbol_table)
-
+        return Statement(
+            name=p.NAME,
+            stmt=p.stmt,
+            builder=self.builder,
+            module=self.module,
+            symbol_table=self.symbol_table)
 
     @_('call')
     def stmt(self, p):
@@ -367,7 +375,9 @@ class PCLParser(Parser):
 
     @_('CHARACTER')
     def rvalue(self, p):
-        return CharConst(value=p[0][1:-1], builder=self.builder, module=self.module,
+        return CharConst(value=p[0][1:-1],
+                         builder=self.builder,
+                         module=self.module,
                          symbol_table=self.symbol_table)
 
     @_('LPAREN rvalue RPAREN')
@@ -447,7 +457,6 @@ class PCLParser(Parser):
 
         raise ValueError('BinOp not parsed correctly.')
 
-
     @_('NOT', 'PLUS', 'MINUS')
     def unop(self, p):
         return p[0]
@@ -496,15 +505,18 @@ if __name__ == '__main__':
 
     s = '''
     program foo;
-        var x: array [2] of integer;
-        var y: integer;
+        var x, z: integer;
+        procedure addother(x : integer; var y: integer; var w : real);
+        begin
+            x := x + y;
+            return;
+        end;
     begin
-        if 1 = 1 then
+        x := 0;
+        while x < 10 do
         begin
-            y := 1;
-        end else
-        begin
-            y := 2;
+            writeInteger(x);
+            x := x + 1;
         end;
     end.
     '''
