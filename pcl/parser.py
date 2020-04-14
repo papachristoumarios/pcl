@@ -51,7 +51,7 @@ class PCLParser(Parser):
         ('nonassoc', 'BRACKETS'),
         ('nonassoc', 'RVALUE'),
         ('nonassoc', 'SINGLE_IF'),
-        ('nonassoc', 'ELSE')
+        ('nonassoc', 'ELSE'),
     )
 
     @_('PROGRAM NAME SEMICOLON body COLON')
@@ -192,7 +192,7 @@ class PCLParser(Parser):
 
     @_('ARRAY OF vartype')
     def vartype(self, p):
-        return ArrayType(length=0, type_=p.vartype, builder=self.builder,
+        return ArrayType(length=-1, type_=p.vartype, builder=self.builder,
                          module=self.module, symbol_table=self.symbol_table)
 
     @_('EXP vartype')
@@ -274,17 +274,23 @@ class PCLParser(Parser):
         return While(expr=p.expr, stmt=p.stmt, builder=self.builder,
                      module=self.module, symbol_table=self.symbol_table)
 
-    @_('IF expr THEN stmt ELSE stmt')
+
+
+
+    @_('IF expr THEN stmt else_stmt')
     def stmt(self, p):
-        return If(expr=p.expr, stmt=p[3], else_stmt=p[5],
+        # import pdb; pdb.set_trace()
+        return If(expr=p.expr, stmt=p[3], else_stmt=p.else_stmt,
                   builder=self.builder, module=self.module,
                   symbol_table=self.symbol_table)
 
-    @_('IF expr THEN stmt %prec SINGLE_IF')
-    def stmt(self, p):
-        return If(expr=p.expr, stmt=p.stmt, else_stmt=None,
-                  builder=self.builder, module=self.module,
-                  symbol_table=self.symbol_table)
+    @_('ELSE stmt')
+    def else_stmt(self, p):
+        return p.stmt
+
+    @_('%prec SINGLE_IF')
+    def else_stmt(self, p):
+        return None
 
     @_('NAME DCOLON stmt')
     def stmt(self, p):
@@ -490,14 +496,16 @@ if __name__ == '__main__':
 
     s = '''
     program foo;
-        procedure sqr();
-            var x: integer;
-        begin;
-            x := 0 + 1;
-            return;
-        end;
+        var x: array [2] of integer;
+        var y: integer;
     begin
-        ;
+        if 1 = 1 then
+        begin
+            y := 1;
+        end else
+        begin
+            y := 2;
+        end;
     end.
     '''
 
