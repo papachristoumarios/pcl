@@ -154,10 +154,16 @@ class PCLParser(Parser):
                       func_type=p.vartype, builder=self.builder,
                       module=self.module, symbol_table=self.symbol_table)
 
-    @_('id_list DCOLON vartype', 'VAR id_list DCOLON vartype')
+    @_('VAR id_list DCOLON vartype')
     def formal(self, p):
-        return Formal(ids=p.id_list, type_=p.vartype, builder=self.builder,
+        return Formal(ids=p.id_list, type_=p.vartype, by_reference=False, builder=self.builder,
                       module=self.module, symbol_table=self.symbol_table)
+
+    @_('id_list DCOLON vartype')
+    def formal(self, p):
+        return Formal(ids=p.id_list, type_=p.vartype, by_reference=True, builder=self.builder,
+                      module=self.module, symbol_table=self.symbol_table)
+
 
     @_('formal semicolon_formal_list')
     def formal_list(self, p):
@@ -297,7 +303,7 @@ class PCLParser(Parser):
 
     @_('lvalue')
     def expr(self, p):
-        p.load = True
+        p.lvalue.load = True
         return p.lvalue
 
     # LVALUE
@@ -484,9 +490,14 @@ if __name__ == '__main__':
 
     s = '''
     program foo;
-        var x: array [2] of integer;
+        procedure sqr();
+            var x: integer;
+        begin;
+            x := 0 + 1;
+            return;
+        end;
     begin
-        x[0] := 1;
+        ;
     end.
     '''
 
