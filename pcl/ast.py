@@ -156,6 +156,8 @@ class LocalHeader(Local):
         self.body = body
 
     def sem(self):
+        # TODO add declaration mismatch with forward and localheader
+
         if self.header.func_type:
             # function
             self.header.func_type.sem()
@@ -476,6 +478,7 @@ class While(Statement):
         self.builder.cbranch(self.expr.cvalue, w_body_block, w_after_block)
         self.builder.position_at_start(w_body_block)
         self.stmt.codegen()
+        self.expr.codegen()
         self.builder.cbranch(self.expr.cvalue, w_body_block, w_after_block)
         self.builder.position_at_start(w_after_block)
 
@@ -501,8 +504,20 @@ class Return(Statement):
         Return statement.
     '''
     def sem(self):
-        pass
+        try:
+            result_entry = self.symbol_table.lookup('result')
+            if result_entry.num_queries == 0:
+                raise PCLSemError('Result must be set once')
+        except PCLSymbolTableError:
+            pass
 
+    def codegen(self):
+        try:
+            result_cvalue_ptr = self.symbol_table.lookup('result').cvalue
+            result_cvalue = self.builder.load(result_cvalue_ptr)
+            self.builder.ret(result_cvalue)
+        except PCLSymbolTableError:
+            self.builder.ret_void()
 
 class Empty(Statement):
     '''
@@ -909,6 +924,7 @@ class LValue(Expr):
 
     def __init__(self, builder, module, symbol_table):
         super(LValue, self).__init__(builder, module, symbol_table)
+        self.load = False
 
 
 class NameLValue(LValue):
@@ -922,9 +938,14 @@ class NameLValue(LValue):
     def sem(self):
         result = self.symbol_table.lookup(self.id_)
         self.stype = result.stype
+        if self.load and result.num_queries == 0:
+            msg = 'Uniitialized lvalue: {}'.format(self.id_)
+            raise PCLSemError(msg)
 
     def codegen(self):
         result = self.symbol_table.lookup(self.id_).cvalue
+        # OPTIMIZE remove redundant loads
+        # if self.load:
         self.cvalue = self.builder.load(result)
 
 class Result(LValue):

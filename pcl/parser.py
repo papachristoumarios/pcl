@@ -268,19 +268,17 @@ class PCLParser(Parser):
         return While(expr=p.expr, stmt=p.stmt, builder=self.builder,
                      module=self.module, symbol_table=self.symbol_table)
 
-
-    @_('IF expr THEN stmt %prec SINGLE_IF')
-    def stmt(self, p):
-        return If(expr=p.expr, stmt=p.stmt, else_stmt=None,
-                  builder=self.builder, module=self.module,
-                  symbol_table=self.symbol_table)
-
     @_('IF expr THEN stmt ELSE stmt')
     def stmt(self, p):
         return If(expr=p.expr, stmt=p[3], else_stmt=p[5],
                   builder=self.builder, module=self.module,
                   symbol_table=self.symbol_table)
 
+    @_('IF expr THEN stmt %prec SINGLE_IF')
+    def stmt(self, p):
+        return If(expr=p.expr, stmt=p.stmt, else_stmt=None,
+                  builder=self.builder, module=self.module,
+                  symbol_table=self.symbol_table)
 
     @_('NAME DCOLON stmt')
     def stmt(self, p):
@@ -299,6 +297,7 @@ class PCLParser(Parser):
 
     @_('lvalue')
     def expr(self, p):
+        p.load = True
         return p.lvalue
 
     # LVALUE
@@ -485,8 +484,9 @@ if __name__ == '__main__':
 
     s = '''
     program foo;
-        var x: array [10] of ^integer;
+        var x: array [2] of integer;
     begin
+        x[0] := 1;
     end.
     '''
 
