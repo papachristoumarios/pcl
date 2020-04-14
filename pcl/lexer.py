@@ -2,50 +2,45 @@ from sly import Lexer
 from pcl.error import PCLLexerError
 import re
 
-
 def regex(s):
     return re.escape(s)
-
-def kw(s):
-    return r'^{}$'.format(s)
-
 
 class PCLLexer(Lexer):
 
     # keywords
     keywords = {
-        regex('and') : 'AND',
-        regex('do') : 'DO',
-        regex('if') : 'IF',
-        regex('of') : 'OF',
-        regex('then') : 'THEN',
-        regex('array') : 'ARRAY',
-        regex('else') : 'ELSE',
-        regex('integer') : 'INTEGER',
-        regex('or') : 'OR',
-        regex('true') : 'TRUE',
-        regex('begin') : 'BEGIN',
-        regex('end') : 'END',
-        regex('label') : 'LABEL',
-        regex('procedure') : 'PROCEDURE',
-        regex('var') : 'VAR',
-        regex('boolean') : 'BOOLEAN',
-        regex('false') : 'FALSE',
-        regex('mod') : 'MOD',
-        regex('program') : 'PROGRAM',
-        regex('while') : 'WHILE',
-        regex('char') : 'CHAR',
-        regex('forward') : 'FORWARD',
-        regex('new') : 'NEW',
-        regex('real') : 'REAL',
-        regex('dispose') : 'DISPOSE',
-        regex('function') : 'FUNCTION',
-        regex('nil') : 'NIL',
-        regex('result') : 'RESULT',
-        regex('div') : 'DIV',
-        regex('goto') : 'GOTO',
-        regex('not') : 'NOT',
-        regex('return') : 'RETURN'
+        regex('and'): 'AND',
+        regex('do'): 'DO',
+        regex('if'): 'IF',
+        regex('of'): 'OF',
+        regex('then'): 'THEN',
+        regex('array'): 'ARRAY',
+        regex('else'): 'ELSE',
+        regex('integer'): 'INTEGER',
+        regex('or'): 'OR',
+        regex('true'): 'TRUE',
+        regex('begin'): 'BEGIN',
+        regex('end'): 'END',
+        regex('label'): 'LABEL',
+        regex('procedure'): 'PROCEDURE',
+        regex('var'): 'VAR',
+        regex('boolean'): 'BOOLEAN',
+        regex('false'): 'FALSE',
+        regex('mod'): 'MOD',
+        regex('program'): 'PROGRAM',
+        regex('while'): 'WHILE',
+        regex('char'): 'CHAR',
+        regex('forward'): 'FORWARD',
+        regex('new'): 'NEW',
+        regex('real'): 'REAL',
+        regex('dispose'): 'DISPOSE',
+        regex('function'): 'FUNCTION',
+        regex('nil'): 'NIL',
+        regex('result'): 'RESULT',
+        regex('div'): 'DIV',
+        regex('goto'): 'GOTO',
+        regex('not'): 'NOT',
+        regex('return'): 'RETURN'
     }
 
     tokens = {
