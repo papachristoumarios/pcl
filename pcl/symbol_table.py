@@ -1,7 +1,9 @@
 from enum import Enum
 from itertools import product
+from llvmlite import ir
 from collections import deque, defaultdict, OrderedDict
 from pcl.error import PCLSymbolTableError
+from pcl.codegen import LLVMTypes
 
 
 class BaseType(Enum):
@@ -21,11 +23,13 @@ class ComposerType(Enum):
     T_VAR_ARRAY = 'T_VAR_ARRAY'
     T_PTR = 'T_PTR'
 
+
 def is_composite(stype):
     return stype[0] != ComposerType.T_VAR_ARRAY
 
+
 arithmetic_types = [(ComposerType.T_NO_COMP, BaseType.T_INT),
-                         (ComposerType.T_NO_COMP, BaseType.T_REAL)]
+                    (ComposerType.T_NO_COMP, BaseType.T_REAL)]
 real_type = (ComposerType.T_NO_COMP, BaseType.T_REAL)
 int_type = (ComposerType.T_NO_COMP, BaseType.T_INT)
 
@@ -34,37 +38,42 @@ class MetaType:
     T_COMPLETE = 'complete'
     T_INCOMPLETE = 'incomplete'
 
+
 class NameType(Enum):
-    N_VAR = 'n_var' # var x, result
-    N_LABEL = 'n_label' # label declaration (you define that a line will have this label)
-    N_PROCEDURE = 'n_procedure' # procedure declaration (does not return anything)
-    N_FUNCTION = 'n_function' # function declaration (returns at least something)
-    N_FORWARD = 'n_forward' # forward header declaration (declare that function is recursive (in header))
+    N_VAR = 'n_var'  # var x, result
+    # label declaration (you define that a line will have this label)
+    N_LABEL = 'n_label'
+    # procedure declaration (does not return anything)
+    N_PROCEDURE = 'n_procedure'
+    # function declaration (returns at least something)
+    N_FUNCTION = 'n_function'
+    # forward header declaration (declare that function is recursive (in
+    # header))
+    N_FORWARD = 'n_forward'
     N_FORMAL = 'n_formal'
 
+
 class SymbolEntry:
-    def __init__(self, stype, name_type, cvalue=None):
+    def __init__(self, stype, name_type, cvalue=None, by_reference=None):
         self.stype = stype
         self.name_type = name_type
         self.offset = None
         self.num_queries = 0
         self.cvalue = cvalue
+        self.by_reference = by_reference
 
+
+# TODO CONVERT TO CLASS
 builtins = [('writeInteger',
              SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_PROC),
-                         name_type=NameType.N_PROCEDURE)),
-            ('writeString',
-             SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_PROC),
-                         name_type=NameType.N_PROCEDURE)),
-            ('writeBoolean',
-             SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_PROC),
-                         name_type=NameType.N_PROCEDURE)),
-            ('writeChar',
-             SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_PROC),
-                         name_type=NameType.N_PROCEDURE)),
-           ]
+                         name_type=NameType.N_PROCEDURE),
+             (LLVMTypes.T_PROC, [LLVMTypes.T_INT]),
+             [
+                 SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_INT),
+                             name_type=NameType.N_FORMAL),
 
-
+             ])
+            ]
 
 
 class Scope:
@@ -87,6 +96,7 @@ class Scope:
             self.locals_[c] = st
             self.size += 1
 
+
 class FormalScope:
     def __init__(self, name, offset=-1, size=0):
         self.locals_ = defaultdict(OrderedDict)
@@ -107,8 +117,10 @@ class FormalScope:
             self.locals_[h][c] = st
             self.size += 1
 
+
 class SymbolTable:
-    def __init__(self):
+    def __init__(self, module):
+        self.module = module
         self.scopes = deque([])
         self.formals = deque([])
         self.scope_names_indices = deque([])
@@ -116,8 +128,22 @@ class SymbolTable:
         # scope for builtins
         self.open_scope()
 
-        for builtin_name, builtin_entry in builtins:
+        for builtin_name, builtin_entry, builtin_signature, formal_entries in builtins:
+            if isinstance(builtin_signature[0], ir.VoidType):
+                builtin_signature = (
+                    ir.IntType(8).as_pointer(),
+                    builtin_signature[1])
+
+            builtin_signature_type = ir.FunctionType(*builtin_signature)
+            builtin_fn = ir.Function(
+                self.module,
+                builtin_signature_type,
+                name=builtin_name)
+            builtin_entry.cvalue = builtin_fn
             self.insert(builtin_name, builtin_entry)
+
+            for i, formal_entry in enumerate(formal_entries):
+                self.insert_formal(builtin_name, '_{}'.format(i), formal_entry)
 
     def __del__(self):
         if len(self.scopes) > 1:
@@ -179,7 +205,6 @@ class SymbolTable:
             raise PCLSymbolTableError('Formals lists do not exist')
         self.formals[-1].insert(header, formal, t)
 
-
     def lookup_formal(self, header, formal):
         if len(self.formals) == 0:
             raise PCLSymbolTableError('Formal scopes do not exist')
@@ -211,8 +236,10 @@ class SymbolTable:
             try:
                 self.lookup('forward_' + header)
             except PCLSymbolTableError:
-                msg = 'Expected forward declaration for header: {}'.format(header)
+                msg = 'Expected forward declaration for header: {}'.format(
+                    header)
                 raise PCLSymbolTableError(msg)
+
 
 if __name__ == '__main__':
     pass
