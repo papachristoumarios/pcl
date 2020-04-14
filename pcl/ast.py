@@ -7,10 +7,12 @@ from pcl.error import PCLParserError, PCLSemError, PCLCodegenError
 from pcl.symbol_table import *
 from pcl.codegen import *
 
+
 class AST(ABC):
     '''
         The Abstract Base Class for the AST Node
     '''
+
     def __init__(self, builder, module, symbol_table):
         '''
             AST Initializer
@@ -38,11 +40,13 @@ class AST(ABC):
         pass
 
     def sem(self):
-        msg = 'sem method not implemented for {}'.format(self.__class__.__name__)
+        msg = 'sem method not implemented for {}'.format(
+            self.__class__.__name__)
         raise NotImplementedError(msg)
 
     def codegen(self):
-        msg = 'codegen method not implemented for {}'.format(self.__class__.__name__)
+        msg = 'codegen method not implemented for {}'.format(
+            self.__class__.__name__)
         raise NotImplementedError(msg)
 
     def pipeline(self, *stages):
@@ -122,6 +126,7 @@ class Program(AST):
         # Close scope
         self.symbol_table.close_scope()
 
+
 class Body(AST):
 
     def __init__(self, locals_, block, builder, module, symbol_table):
@@ -144,6 +149,7 @@ class Body(AST):
 
         self.block.codegen()
 
+
 class Local(AST):
     def __init__(self, builder, module, symbol_table):
         super(Local, self).__init__(builder, module, symbol_table)
@@ -161,18 +167,28 @@ class LocalHeader(Local):
         if self.header.func_type:
             # function
             self.header.func_type.sem()
-            header_name_entry = SymbolEntry(stype=self.header.func_type.stype, name_type=NameType.N_FUNCTION)
+            header_name_entry = SymbolEntry(
+                stype=self.header.func_type.stype,
+                name_type=NameType.N_FUNCTION)
         else:
             # procedure
-            header_name_entry = SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_PROC), name_type=NameType.N_PROCEDURE)
+            header_name_entry = SymbolEntry(
+                stype=(
+                    ComposerType.T_NO_COMP,
+                    BaseType.T_PROC),
+                name_type=NameType.N_PROCEDURE)
 
         self.symbol_table.insert(self.header.id_, header_name_entry)
 
         for formal in self.header.formals:
             formal.sem()
             for formal_id in formal.ids:
-                formal_entry = SymbolEntry(stype=formal.stype, name_type=NameType.N_FORMAL)
-                self.symbol_table.insert_formal(self.header.id_, formal_id, formal_entry)
+                formal_entry = SymbolEntry(
+                    stype=formal.stype,
+                    name_type=NameType.N_FORMAL,
+                    by_reference=formal.by_reference)
+                self.symbol_table.insert_formal(
+                    self.header.id_, formal_id, formal_entry)
 
         # Open function scope
         self.symbol_table.open_scope(self.header.id_)
@@ -185,7 +201,8 @@ class LocalHeader(Local):
         for formal in self.header.formals:
             formal.sem()
             for id_ in formal.ids:
-                id_entry = SymbolEntry(stype=formal.stype, name_type=NameType.N_VAR)
+                id_entry = SymbolEntry(
+                    stype=formal.stype, name_type=NameType.N_VAR)
                 self.symbol_table.insert(id_, id_entry)
 
         # Sem the body
@@ -193,6 +210,95 @@ class LocalHeader(Local):
 
         # Close function scope
         self.symbol_table.close_scope()
+
+    def codegen(self):
+
+        # Infer function type (signature)
+        if self.header.func_type:
+            # function
+            self.header.func_type.codegen()
+            header_return_cvalue = self.header.func_type.cvalue
+        else:
+            header_return_cvalue = LLVMTypes.T_PROC
+
+        formal_types_cvalues = []
+
+        # Infer formal parameter types
+        for formal in self.header.formals:
+            formal.type_.codegen()
+            for formal_id in formal.ids:
+                if formal.by_reference:
+                    formal_types_cvalues.append(
+                        formal.type_.cvalue.as_pointer())
+                else:
+                    formal_types_cvalues.append(formal.type_.cvalue)
+
+        header_type_cvalue = ir.FunctionType(
+            header_return_cvalue, formal_types_cvalues, var_arg=False)
+
+        header_cvalue = ir.Function(
+            self.module,
+            header_type_cvalue,
+            name=self.header.id_)
+
+        if self.header.func_type:
+            header_entry = SymbolEntry(
+                stype=self.header.func_type.stype,
+                name_type=NameType.N_FUNCTION,
+                cvalue=header_cvalue)
+        else:
+            header_entry = SymbolEntry(
+                stype=(
+                    ComposerType.T_NO_COMP,
+                    BaseType.T_PROC),
+                name_type=NameType.N_PROCEDURE,
+                cvalue=header_cvalue)
+
+        self.symbol_table.insert(self.header.id_, header_entry)
+
+        header_args = header_cvalue.args
+
+        header_block = header_cvalue.append_basic_block(
+            self.header.id_ + '_entry')
+
+        with self.builder.goto_block(header_block):
+            # Register args to symbol table as formals
+            counter = 0
+            for formal in self.header.formals:
+                for formal_id in formal.ids:
+                    arg = header_args[counter]
+                    arg_formal_entry = SymbolEntry(
+                        stype=formal.stype,
+                        name_type=NameType.N_FORMAL,
+                        cvalue=arg,
+                        by_reference=formal.by_reference)
+                    self.symbol_table.insert_formal(
+                        self.header.id_, formal_id, arg_formal_entry)
+                    counter += 1
+                    # arg_ptr_cvalue = self.builder.alloca(formal_types_cvalues[counter])
+                    # arg_entry_cvalue = self.builder.load(arg)
+                    # arg_entry = SymbolEntry(stype=formal.stype, name_type=NameType.N_VAR, cvalue=arg_entry_cvalue)
+                    # counter += 1
+            self.symbol_table.open_scope(self.header.id_)
+
+            counter = 0
+            for formal in self.header.formals:
+                for formal_id in formal.ids:
+                    arg = header_args[counter]
+                    if not formal.by_reference:
+                        arg_cvalue = self.builder.alloca(arg.type)
+                        self.builder.store(arg, arg_cvalue)
+                    else:
+                        arg_cvalue = arg
+                    arg_entry = SymbolEntry(
+                        stype=formal.stype,
+                        name_type=NameType.N_VAR,
+                        cvalue=arg_cvalue)
+                    self.symbol_table.insert(formal_id, arg_entry)
+                    counter += 1
+
+            self.body.codegen()
+            self.symbol_table.close_scope()
 
 
 class VarList(Local):
@@ -209,6 +315,7 @@ class VarList(Local):
         for var in self.vars_:
             var.codegen()
 
+
 class Var(Local):
     def __init__(self, ids, type_, builder, module, symbol_table):
         super(Var, self).__init__(builder, module, symbol_table)
@@ -219,7 +326,9 @@ class Var(Local):
         self.type_.sem()
         # Iterate over all names and register variables
         for id_ in self.ids:
-            var_entry = SymbolEntry(stype=self.type_.stype, name_type=NameType.N_VAR)
+            var_entry = SymbolEntry(
+                stype=self.type_.stype,
+                name_type=NameType.N_VAR)
             self.symbol_table.insert(id_, var_entry)
 
     def codegen(self):
@@ -227,8 +336,12 @@ class Var(Local):
 
         for id_ in self.ids:
             id_cvalue = self.builder.alloca(self.type_.cvalue)
-            var_entry = SymbolEntry(stype=self.type_.stype, name_type=NameType.N_VAR, cvalue=id_cvalue)
+            var_entry = SymbolEntry(
+                stype=self.type_.stype,
+                name_type=NameType.N_VAR,
+                cvalue=id_cvalue)
             self.symbol_table.insert(id_, var_entry)
+
 
 class Label(Local):
     def __init__(self, ids, builder, module, symbol_table):
@@ -238,11 +351,16 @@ class Label(Local):
     def sem(self):
         # Iterate over all names and register variables
         for id_ in self.ids:
-            label_entry = SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_LABEL), name_type=NameType.N_LABEL)
+            label_entry = SymbolEntry(
+                stype=(
+                    ComposerType.T_NO_COMP,
+                    BaseType.T_LABEL),
+                name_type=NameType.N_LABEL)
             self.symbol_table.insert(id_, label_entry)
 
     def codegen(self):
         pass
+
 
 class Forward(Local):
 
@@ -256,17 +374,24 @@ class Forward(Local):
             header_type = self.header.func_type.stype
         else:
             header_type = (ComposerType.T_NO_COMP, BaseType.T_PROC)
-        forward_entry = SymbolEntry(stype=header_type, name_type=NameType.N_FORWARD)
+        forward_entry = SymbolEntry(
+            stype=header_type,
+            name_type=NameType.N_FORWARD)
         self.symbol_table.insert('forward_' + self.header.id_, forward_entry)
 
         for formal in self.header.formals:
             formal.sem()
             for formal_id in formal.ids:
-                formal_entry = SymbolEntry(stype=formal.stype, name_type=NameType.N_FORMAL)
-                self.symbol_table.insert_formal('forward_'+ self.header.id_, formal_id, formal_entry)
+                formal_entry = SymbolEntry(
+                    stype=formal.stype,
+                    name_type=NameType.N_FORMAL,
+                    by_reference=formal.by_reference)
+                self.symbol_table.insert_formal(
+                    'forward_' + self.header.id_, formal_id, formal_entry)
 
     def codegen(self):
         pass
+
 
 class Header(AST):
     def __init__(
@@ -291,16 +416,26 @@ class Header(AST):
 
     def sem(self):
         if self.func_type:
-            result_entry = SymbolEntry(stype=self.func_type.stype, name_type=NameType.N_VAR)
+            result_entry = SymbolEntry(
+                stype=self.func_type.stype,
+                name_type=NameType.N_VAR)
             self.symbol_table.insert('result', result_entry)
 
 
 class Formal(AST):
 
-    def __init__(self, ids, type_, builder, module, symbol_table):
+    def __init__(
+            self,
+            ids,
+            type_,
+            by_reference,
+            builder,
+            module,
+            symbol_table):
         super(Formal, self).__init__(builder, module, symbol_table)
         self.ids = ids
         self.type_ = type_
+        self.by_reference = by_reference
 
     def sem(self):
         self.type_.sem()
@@ -318,6 +453,7 @@ class Type(AST):
 
     def codegen(self):
         self.cvalue = LLVMTypes.mapping[self.type_]
+
 
 class PointerType(Type):
     '''
@@ -338,6 +474,7 @@ class PointerType(Type):
         self.type_.codegen()
         self.cvalue = ir.PointerType(self.type_.cvalue)
 
+
 class ArrayType(Type):
 
     def __init__(self, length, type_, builder, module, symbol_table):
@@ -346,19 +483,20 @@ class ArrayType(Type):
 
     def sem(self):
         self.type_.sem()
-        if self.length > 0:
+        if self.length >= 0:
             self.stype = (ComposerType.T_CONST_ARRAY, self.type_.stype)
-        elif self.length == 0:
+        elif self.length == -1:
             self.stype = (ComposerType.T_VAR_ARRAY, self.type_.stype)
         else:
             raise PCLSemError('Negative length')
 
     def codegen(self):
         self.type_.codegen()
-        if self.length > 0:
+        if self.length >= 0:
             self.cvalue = ir.ArrayType(self.type_.cvalue, self.length)
-        elif self.length == 0:
+        elif self.length == -1:
             self.cvalue = ir.PointerType(self.type_.cvalue)
+
 
 class Statement(AST):
 
@@ -375,9 +513,17 @@ class Statement(AST):
     def codegen(self):
         if self.name:
             self.cvalue = self.builder.append_basic_block(self.name)
-            label_entry = SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_LABEL), name_type=NameType.N_LABEL, cvalue=self.cvalue)
+            label_entry = SymbolEntry(
+                stype=(
+                    ComposerType.T_NO_COMP,
+                    BaseType.T_LABEL),
+                name_type=NameType.N_LABEL,
+                cvalue=self.cvalue)
             self.symbol_table.insert(self.name, label_entry)
+            # TODO FIX
+            self.builder.position_at_end(self.cvalue)
             self.stmt.codegen()
+
 
 class Block(Statement):
 
@@ -402,7 +548,8 @@ class Call(Statement):
 
     def sem(self):
 
-        # Assert that if call is recursive (calee calls himself) then fcn must be forward
+        # Assert that if call is recursive (calee calls himself) then fcn must
+        # be forward
         self.symbol_table.needs_forward_declaration(self.id_)
 
         call_entry = self.symbol_table.lookup(self.id_)
@@ -423,6 +570,27 @@ class Call(Statement):
                     continue
                 else:
                     raise e
+
+    def codegen(self):
+        # WIP
+        real_params = []
+
+        formals = self.symbol_table.formal_generator(self.id_)
+        for expr, (formal_name, formal) in zip(self.exprs, formals):
+            if formal.by_reference:
+                if isinstance(expr, NameLValue):
+                    ptr = self.symbol_table.lookup(expr.id_).cvalue
+                    real_params.append(ptr)
+                else:
+                    raise NotImplementedError()
+            else:
+                expr.codegen()
+                real_params.append(expr.cvalue)
+
+        call_entry_cvalue = self.symbol_table.lookup(self.id_).cvalue
+
+        self.builder.call(call_entry_cvalue, real_params)
+
 
 class If(Statement):
     '''
@@ -455,6 +623,7 @@ class If(Statement):
         else:
             with self.builder.if_then(self.expr.cvalue):
                 self.stmt.codegen()
+
 
 class While(Statement):
     '''
@@ -496,17 +665,23 @@ class Goto(Statement):
         self.symbol_table.lookup(self.id_, last_scope=True)
 
     def codegen(self):
+        # TODO fix non terminating block
         goto_block = self.symbol_table.lookup(self.id_).cvalue
+        helper_block = self.builder.append_basic_block()
+        self.builder.position_at_end(helper_block)
         self.builder.branch(goto_block)
+        self.builder.position_at_end(helper_block)
+
 
 class Return(Statement):
     '''
         Return statement.
     '''
+
     def sem(self):
         try:
             result_entry = self.symbol_table.lookup('result')
-            if result_entry.num_queries == 0:
+            if result_entry.num_queries == 1:
                 raise PCLSemError('Result must be set once')
         except PCLSymbolTableError:
             pass
@@ -519,10 +694,12 @@ class Return(Statement):
         except PCLSymbolTableError:
             self.builder.ret_void()
 
+
 class Empty(Statement):
     '''
         Empty Statement.
     '''
+
     def sem(self):
         pass
 
@@ -544,17 +721,24 @@ class New(Statement):
         self.lvalue.sem()
         if self.expr:
             if self.lvalue.stype[0] != ComposerType.T_PTR or self.lvalue.stype[1] != ComposerType.T_VAR_ARRAY:
-                raise PCLSemError('Cannot create new instance of {}'.format(self.lvalue.stype))
+                raise PCLSemError(
+                    'Cannot create new instance of {}'.format(
+                        self.lvalue.stype))
 
             self.expr.sem()
             self.expr.type_check((ComposerType.T_NO_COMP, ComposerType.T_INT))
 
             # ^array of t -> array [n] of t
-            self.stype = (ComposerType.T_CONST_ARRAY, self.lvalue.stype[1][1][1])
+            self.stype = (
+                ComposerType.T_CONST_ARRAY,
+                self.lvalue.stype[1][1][1])
 
         else:
-            if self.lvalue.stype[0] != ComposerType.T_PTR or not is_composite(self.lvalue.stype[1]):
-                raise PCLSemError('Cannot create new instance of {}'.format(self.lvalue.stype))
+            if self.lvalue.stype[0] != ComposerType.T_PTR or not is_composite(
+                    self.lvalue.stype[1]):
+                raise PCLSemError(
+                    'Cannot create new instance of {}'.format(
+                        self.lvalue.stype))
 
             # ^t -> t
             self.stype = self.lvalue.stype[1]
@@ -575,10 +759,15 @@ class Dispose(Statement):
 
         if self.brackets:
             if self.lvalue.stype[0] != ComposerType.T_PTR or self.lvalue.stype[1] != ComposerType.T_VAR_ARRAY:
-                raise PCLSemError('Cannot dispose instance of {}'.format(self.lvalue.stype))
+                raise PCLSemError(
+                    'Cannot dispose instance of {}'.format(
+                        self.lvalue.stype))
         else:
-            if self.lvalue.stype[0] != ComposerType.T_PTR or not is_composite(self.lvalue.stype[1]):
-                raise PCLSemError('Cannot dispose instance of {}'.format(self.lvalue.stype))
+            if self.lvalue.stype[0] != ComposerType.T_PTR or not is_composite(
+                    self.lvalue.stype[1]):
+                raise PCLSemError(
+                    'Cannot dispose instance of {}'.format(
+                        self.lvalue.stype))
 
         self.stype = (ComposerType.T_NO_COMP, BaseType.T_NIL)
 
@@ -609,6 +798,7 @@ class RValue(Expr):
 
         super(RValue, self).type_check(target, *args)
 
+
 class IntegerConst(RValue):
     '''
         Integer constant. Holds integer numbers.
@@ -623,6 +813,7 @@ class IntegerConst(RValue):
 
     def codegen(self):
         self.cvalue = ir.Constant(LLVMTypes.T_INT, self.value)
+
 
 class RealConst(RValue):
     '''
@@ -723,7 +914,9 @@ class ArUnOp(RValue):
             if self.stype[1] == BaseType.T_INT:
                 self.cvalue = self.builder.neg(self.rhs.cvalue)
             elif self.stype[1] == BaseType.T_REAL:
-                self.cvalue = self.builder.fsub(LLVMConstants.ZERO_REAL, self.rhs.cvalue)
+                self.cvalue = self.builder.fsub(
+                    LLVMConstants.ZERO_REAL, self.rhs.cvalue)
+
 
 class LogicUnOp(RValue):
     '''
@@ -743,6 +936,7 @@ class LogicUnOp(RValue):
     def codegen(self):
         self.rhs.codegen()
         self.cvalue = self.builder.not_(self.rhs.cvalue)
+
 
 class ArOp(RValue):
     '''
@@ -816,6 +1010,7 @@ class ArOp(RValue):
             elif self.op == '/':
                 self.cvalue = self.builder.fdiv(lhs_cvalue, rhs_cvalue)
 
+
 class CompOp(RValue):
     '''
         Comparison operation between two sides (lhs, rhs)
@@ -832,10 +1027,13 @@ class CompOp(RValue):
         self.rhs.sem()
 
         if self.op == '=' or self.op == '<>':
-            arithmetic = (self.lhs.stype in arithmetic_types) and (self.rhs.stype in arithmetic_types)
+            arithmetic = (
+                self.lhs.stype in arithmetic_types) and (
+                self.rhs.stype in arithmetic_types)
             if not arithmetic:
                 assert self.lhs.stype == self.rhs.stype, 'Comparison is only allowed between operands of same type'
-                assert self.lhs.stype[0] != ComposerType.T_CONST_ARRAY and self.lhs.stype[0] != ComposerType.T_VAR_ARRAY, 'Arrays cannot be compared.'
+                assert self.lhs.stype[0] != ComposerType.T_CONST_ARRAY and self.lhs.stype[
+                    0] != ComposerType.T_VAR_ARRAY, 'Arrays cannot be compared.'
         else:
             self.lhs.type_check(arithmetic_types)
             self.rhs.type_check(arithmetic_types)
@@ -846,15 +1044,19 @@ class CompOp(RValue):
         self.lhs.codegen()
         self.rhs.codegen()
 
-        arithmetic = (self.lhs.stype in arithmetic_types) and (self.rhs.stype in arithmetic_types)
+        arithmetic = (
+            self.lhs.stype in arithmetic_types) and (
+            self.rhs.stype in arithmetic_types)
 
         # TODO ADD ARRAY COMPARISON
         if arithmetic:
             if self.lhs.stype == real_type and self.rhs.stype == int_type:
                 lhs_cvalue = self.lhs.cvalue
-                rhs_cvalue = self.builder.sitofp(self.rhs.cvalue, LLVMTypes.T_REAL)
+                rhs_cvalue = self.builder.sitofp(
+                    self.rhs.cvalue, LLVMTypes.T_REAL)
             elif self.lhs.stype == int_type and self.rhs.stype == real_type:
-                lhs_cvalue = self.builder.sitofp(self.lhs.cvalue, LLVMTypes.T_REAL)
+                lhs_cvalue = self.builder.sitofp(
+                    self.lhs.cvalue, LLVMTypes.T_REAL)
                 rhs_cvalue = self.rhs.cvalue
             else:
                 lhs_cvalue = self.lhs.cvalue
@@ -863,10 +1065,11 @@ class CompOp(RValue):
             cmp_op = LLVMOperators.get_op(self.op)
 
             if self.lhs.stype == int_type and self.rhs.stype == int_type:
-                self.cvalue = self.builder.icmp_signed(cmp_op, lhs_cvalue, rhs_cvalue)
+                self.cvalue = self.builder.icmp_signed(
+                    cmp_op, lhs_cvalue, rhs_cvalue)
             else:
-                self.cvalue = self.builder.fcmp_ordered(cmp_op, lhs_cvalue, rhs_cvalue)
-
+                self.cvalue = self.builder.fcmp_ordered(
+                    cmp_op, lhs_cvalue, rhs_cvalue)
 
 
 class LogicOp(RValue):
@@ -931,6 +1134,7 @@ class NameLValue(LValue):
     '''
         Named LValue: variable name (i.e. x)
     '''
+
     def __init__(self, id_, builder, module, symbol_table):
         super(NameLValue, self).__init__(builder, module, symbol_table)
         self.id_ = id_
@@ -938,15 +1142,16 @@ class NameLValue(LValue):
     def sem(self):
         result = self.symbol_table.lookup(self.id_)
         self.stype = result.stype
-        if self.load and result.num_queries == 0:
-            msg = 'Uniitialized lvalue: {}'.format(self.id_)
-            raise PCLSemError(msg)
+        # if self.load and result.num_queries == 1:
+        # msg = 'Uniitialized lvalue: {}'.format(self.id_)
+        # raise PCLSemError(msg)
 
     def codegen(self):
         result = self.symbol_table.lookup(self.id_).cvalue
         # OPTIMIZE remove redundant loads
         # if self.load:
         self.cvalue = self.builder.load(result)
+
 
 class Result(LValue):
     '''
@@ -972,10 +1177,17 @@ class StringLiteral(LValue):
         self.length = len(self.literal)
 
     def sem(self):
-        self.stype = (ComposerType.T_CONST_ARRAY, (ComposerType.T_NO_COMP, BaseType.T_CHAR))
+        self.stype = (
+            ComposerType.T_CONST_ARRAY,
+            (ComposerType.T_NO_COMP,
+             BaseType.T_CHAR))
 
     def codegen(self):
-        self.cvalue = ir.Constant(ir.ArrayType(LLVMTypes.T_CHAR, self.length), bytearray(self.literal.encode("utf8")))
+        self.cvalue = ir.Constant(
+            ir.ArrayType(
+                LLVMTypes.T_CHAR, self.length), bytearray(
+                self.literal.encode("utf8")))
+
 
 class Deref(LValue):
     '''
@@ -1000,11 +1212,11 @@ class Deref(LValue):
         self.stype = self.expr.stype[1]
 
 
-
 class SetExpression(LValue):
     '''
         Assignment of an expression to a name
     '''
+
     def __init__(self, lvalue, expr, builder, module, symbol_table):
         super(SetExpression, self).__init__(builder, module, symbol_table)
         self.lvalue = lvalue
@@ -1014,14 +1226,19 @@ class SetExpression(LValue):
         self.expr.sem()
         self.lvalue.sem()
 
-        if self.expr.stype == self.lvalue.stype and is_composite(self.expr.stype):
+        if self.expr.stype == self.lvalue.stype and is_composite(
+                self.expr.stype):
             return
         elif self.lvalue.stype[1] == BaseType.T_REAL and self.expr.stype[1] == BaseType.T_INT:
             return
         elif self.lvalue.stype[0] == ComposerType.T_VAR_ARRAY and self.expr.stype[0] == ComposerType.T_CONST_ARRAY:
             return
+        elif self.expr.stype[1] == BaseType.T_NIL:
+            return
         else:
-            raise PCLSemError('Invalid set expression {} := {}'.format(self.lvalue.stype, self.expr.stype))
+            raise PCLSemError(
+                'Invalid set expression {} := {}'.format(
+                    self.lvalue.stype, self.expr.stype))
 
     def codegen(self):
         self.expr.codegen()
@@ -1031,10 +1248,12 @@ class SetExpression(LValue):
             result = self.symbol_table.lookup(self.lvalue.id_).cvalue
             self.builder.store(self.expr.cvalue, result)
 
+
 class LBrack(LValue):
     '''
         ArrayElement
     '''
+
     def __init__(self, lvalue, expr, builder, module, symbol_table):
         super(LBrack, self).__init__(builder, module, symbol_table)
         self.lvalue = lvalue
@@ -1045,3 +1264,10 @@ class LBrack(LValue):
         self.expr.type_check((ComposerType.T_NO_COMP, BaseType.T_INT))
         self.lvalue.sem()
         self.stype = self.lvalue.stype[1]
+
+    def codegen(self):
+        self.expr.codegen()
+        self.lvalue.codegen()
+
+        gep_elem = self.builder.gep(self.lvalue.cvalue, [self.expr.cvalue])
+        self.cvalue = self.builder.load(gep_elem)
