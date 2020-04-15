@@ -35,6 +35,8 @@ make depend
 make compiler
 ```
 
+Please note that PCL compiler requires Python **>=3.6** to work since it has metaprogramming features (due to SLY) to specify lexers and parsers. Older versions **won't** work. 
+
 ## :hammer: Usage
 
 After you have set up PCL you can use the `pcl` executable of the PCL compiler.
@@ -71,6 +73,13 @@ pydoc pcl.submodule
 ```
 
 where `submodule` is one of the submodules inside `pcl/`.
+
+## Tests
+
+The PCL Language comes with tests built-in for every "independent" part of the compiler. The tests are located in the `tests/` directory and the examples used in the `examples/` directory. You will need `pytest` to run them.  You can run the tests via
+```bash
+cd tests/ && pytest *
+```
 
 ## References 
 
