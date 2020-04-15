@@ -1,5 +1,9 @@
-compiler:
-	pip install .
+CC=gcc
+CCFLAGS=-fPIC -shared
+
+compiler: pcl/builtins.c
+	$(CC) pcl/builtins.c -o pcl/builtins.so $(CCFLAGS)
+	pip install -e .
 
 depend: requirements.txt
 	apt-get install -y llvm-8 gcc-4.8
@@ -11,3 +15,6 @@ create_env:
 
 tests:
 	pytest tests/*
+
+clean:
+	rm -rf pcl/builtins.so

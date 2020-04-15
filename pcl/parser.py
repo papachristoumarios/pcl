@@ -504,20 +504,17 @@ if __name__ == '__main__':
     parser = PCLParser()
 
     s = '''
-    program foo;
-        var x, z: integer;
-        procedure addother(x : integer; var y: integer; var w : real);
-        begin
-            x := x + y;
-            return;
-        end;
+    program yes;
+        var x : integer;
+        var y: ^integer;
     begin
-        x := 0;
-        while x < 10 do
-        begin
-            writeInteger(x);
-            x := x + 1;
-        end;
+        x := 1;
+        y := @x;
+        x := x + 1;
+        writeInteger(x);
+        writeInteger(y^);
+        dispose y;
+        writeInteger(y^);
     end.
     '''
 

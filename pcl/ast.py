@@ -521,8 +521,8 @@ class Statement(AST):
                 cvalue=self.cvalue)
             self.symbol_table.insert(self.name, label_entry)
             # TODO FIX
-            self.builder.position_at_end(self.cvalue)
-            self.stmt.codegen()
+            with self.builder.goto_block(self.cvalue):
+                self.stmt.codegen()
 
 
 class Block(Statement):
@@ -536,6 +536,8 @@ class Block(Statement):
             stmt.sem()
 
     def codegen(self):
+        #helper_block = self.builder.append_basic_block()
+        #with self.builder.goto(helper_block):
         for stmt in self.stmt_list:
             stmt.codegen()
 
@@ -668,9 +670,8 @@ class Goto(Statement):
         # TODO fix non terminating block
         goto_block = self.symbol_table.lookup(self.id_).cvalue
         helper_block = self.builder.append_basic_block()
-        self.builder.position_at_end(helper_block)
-        self.builder.branch(goto_block)
-        self.builder.position_at_end(helper_block)
+        with self.builder.goto_block(helper_block):
+            self.builder.branch(goto_block)
 
 
 class Return(Statement):
@@ -771,6 +772,9 @@ class Dispose(Statement):
 
         self.stype = (ComposerType.T_NO_COMP, BaseType.T_NIL)
 
+    def codegen(self):
+        self.lvalue.codegen()
+        self.lvalue.set_nil()
 
 class Expr(AST):
     '''
@@ -1121,6 +1125,9 @@ class AddressOf(RValue):
         self.lvalue.sem()
         self.stype = (ComposerType.T_PTR, self.lvalue.stype)
 
+    def codegen(self):
+        self.lvalue.codegen()
+        self.cvalue = self.symbol_table.lookup(self.lvalue.id_).cvalue
 
 class LValue(Expr):
     '''
@@ -1181,7 +1188,7 @@ class Result(NameLValue):
     #def codegen(self):
     #    result = self.symbol_table.lookup('result').cvalue
     #    self.cvalue = self.builder.load(result)
-    
+
 class StringLiteral(LValue):
     '''
         Holds a node for a string literal
@@ -1226,6 +1233,10 @@ class Deref(LValue):
             raise PCLSemError('Cannot dereference nil')
 
         self.stype = self.expr.stype[1]
+
+    def codegen(self):
+        self.expr.codegen()
+        self.cvalue = self.builder.load(self.expr.cvalue)
 
 
 class SetExpression(LValue):

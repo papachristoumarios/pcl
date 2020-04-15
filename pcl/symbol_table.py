@@ -64,7 +64,8 @@ class SymbolEntry:
 
 
 # TODO CONVERT TO CLASS
-builtins = [('writeInteger',
+builtins = [
+            ('writeInteger',
              SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_PROC),
                          name_type=NameType.N_PROCEDURE),
              (LLVMTypes.T_PROC, [LLVMTypes.T_INT]),
@@ -72,7 +73,50 @@ builtins = [('writeInteger',
                  SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_INT),
                              name_type=NameType.N_FORMAL),
 
-             ])
+             ]),
+             ('writeChar',
+              SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_PROC),
+                          name_type=NameType.N_PROCEDURE),
+              (LLVMTypes.T_PROC, [LLVMTypes.T_CHAR]),
+              [
+                  SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_CHAR),
+                              name_type=NameType.N_FORMAL),
+
+              ]),
+              ('writeReal',
+               SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_PROC),
+                           name_type=NameType.N_PROCEDURE),
+               (LLVMTypes.T_PROC, [LLVMTypes.T_REAL]),
+               [
+                   SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_REAL),
+                               name_type=NameType.N_FORMAL),
+
+               ]),
+               ('writeBoolean',
+                SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_PROC),
+                            name_type=NameType.N_PROCEDURE),
+                (LLVMTypes.T_PROC, [LLVMTypes.T_BOOL]),
+                [
+                    SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_BOOL),
+                                name_type=NameType.N_FORMAL),
+
+                ]),
+                ('writeString',
+                 SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_PROC),
+                             name_type=NameType.N_PROCEDURE),
+                 (LLVMTypes.T_PROC, [LLVMTypes.T_STRING]),
+                 [
+                     SymbolEntry(stype=(ComposerType.T_CONST_ARRAY, (ComposerType.T_NO_COMP, BaseType.T_CHAR)),
+                                 name_type=NameType.N_FORMAL),
+
+                 ]),
+             ('readInteger',
+              SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_INT),
+                          name_type=NameType.N_FUNCTION),
+              (LLVMTypes.T_INT, []),
+              [
+
+              ])
             ]
 
 
@@ -133,6 +177,7 @@ class SymbolTable:
                 builtin_signature = (
                     ir.IntType(8).as_pointer(),
                     builtin_signature[1])
+
 
             builtin_signature_type = ir.FunctionType(*builtin_signature)
             builtin_fn = ir.Function(

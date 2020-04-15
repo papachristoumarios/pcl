@@ -5,11 +5,12 @@ import os
 
 
 class LLVMTypeSize:
+    # Type sizes in BYTES
     T_BOOL = 1
     T_CHAR = 1
     T_REAL = 10
     T_PTR = 2
-    T_INT = 32
+    T_INT = 4
 
     @staticmethod
     def get_const_array_size(n, t):
@@ -20,13 +21,14 @@ class LLVMTypeSize:
 
 
 class LLVMTypes:
-    T_INT = ir.IntType(LLVMTypeSize.T_INT)
-    T_BOOL = ir.IntType(LLVMTypeSize.T_BOOL)
-    T_CHAR = ir.IntType(LLVMTypeSize.T_CHAR)
+    T_INT = ir.IntType(4 * LLVMTypeSize.T_INT)
+    T_BOOL = ir.IntType(4 * LLVMTypeSize.T_BOOL)
+    T_CHAR = ir.IntType(4 * LLVMTypeSize.T_CHAR)
     T_PROC = ir.VoidType()
-    T_PTR = ir.PointerType(LLVMTypeSize.T_PTR)
+    T_PTR = ir.PointerType(4 * LLVMTypeSize.T_PTR)
     T_REAL = ir.DoubleType()
-    T_NIL = ir.IntType(1).as_pointer()
+    T_NIL = ir.IntType(4).as_pointer()
+    T_STRING = T_CHAR.as_pointer()
 
     mapping = {
         'integer': T_INT,
@@ -113,4 +115,4 @@ class PCLCodegen:
             f.write(final_code)
 
         os.system('llc-8 -filetype=obj {}'.format(llvm_filename))
-        os.system('gcc {} builtins.c -o {}'.format(obj_filename, output_filename))
+        os.system('gcc {} builtins.c -lm -o {}'.format(obj_filename, output_filename))

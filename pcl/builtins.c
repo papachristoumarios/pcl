@@ -14,7 +14,9 @@ typedef int8_t chr;
 extern chr* writeInteger(integer);
 extern chr* writeChar(chr);
 extern chr* writeReal(real);
+extern chr* writeBoolean(boolean);
 extern chr* writeString(chr*);
+extern integer readInteger();
 
 // write
 chr* writeInteger(integer n) {
@@ -23,26 +25,35 @@ chr* writeInteger(integer n) {
 
 chr* writeBoolean(boolean b) {
   (b == 1) ? printf("true") : printf("false");
+  printf("\n");
 }
 
 chr* writeChar(chr c) {
-  printf("%c", c);
+  printf("%c\n", c + 'a' - 1);
 }
 
 chr* writeReal(real x) {
-  printf("%f", x);
+  printf("%f\n", x);
 }
 
 chr* writeString(chr *s) {
-  printf("%s", s);
+  printf("%s\n", s);
 }
 
+
 // read
-//
-// real pi() {
-//   return M_PI;
-// }
-//
-// real ln(real x) {
-//   return log(x);
-// }
+integer readInteger() {
+  integer n;
+  char t;
+  scanf("%d%c", &n, &t);
+  return (integer)n;
+}
+
+// ln
+real ln(real x) {
+  return log(x);
+}
+
+real pi() {
+  return (real)M_PI;
+}
