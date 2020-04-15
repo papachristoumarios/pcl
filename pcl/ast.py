@@ -889,6 +889,8 @@ class Nil(RValue):
     def sem(self):
         self.stype = (ComposerType.T_NO_COMP, BaseType.T_NIL)
 
+    def codegen(self):
+        pass
 
 class ArUnOp(RValue):
     '''
@@ -1152,6 +1154,17 @@ class NameLValue(LValue):
         # if self.load:
         self.cvalue = self.builder.load(result)
 
+    def set_nil(self):
+        # Result is a pointer to our type e.g. for integer variable i32 it is *i32
+        result = self.symbol_table.lookup(self.id_).cvalue
+
+        # Convert 0 to the pointee of the pointer (the actual type)
+        nil = self.builder.inttoptr(0, result.type.pointee)
+
+        # Store value to pointee
+        self.builder.store(nil, result)
+
+
 
 class Result(LValue):
     '''
@@ -1165,7 +1178,10 @@ class Result(LValue):
         result = self.symbol_table.lookup('result')
         self.stype = result.stype
 
-
+    def codegen(self):
+        result = self.symbol_table.lookup('result').cvalue
+        self.cvalue = self.builder.load(result)
+    
 class StringLiteral(LValue):
     '''
         Holds a node for a string literal
