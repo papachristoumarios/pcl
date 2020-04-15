@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <stdarg.h>
 
 typedef int32_t integer;
 typedef double real;
@@ -15,7 +16,7 @@ extern chr* writeInteger(integer);
 extern chr* writeChar(chr);
 extern chr* writeReal(real);
 extern chr* writeBoolean(boolean);
-extern chr* writeString(chr*);
+extern chr* writeString(integer, ...);
 extern integer readInteger();
 
 // write
@@ -36,8 +37,14 @@ chr* writeReal(real x) {
   printf("%f\n", x);
 }
 
-chr* writeString(chr *s) {
-  printf("%s\n", s);
+chr* writeString(integer len, ...) {
+  va_list valist;
+  va_start(valist, len);
+  integer i;
+  for (i = 0; i < len; i++) {
+      putchar((chr)va_arg(valist, int) + 'a' - 1);
+   }
+   printf("\n");
 }
 
 
@@ -56,4 +63,9 @@ real ln(real x) {
 
 real pi() {
   return (real)M_PI;
+}
+
+int main() {
+  writeString(3, 1, 2, 3);
+  return 0;
 }
