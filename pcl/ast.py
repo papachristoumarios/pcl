@@ -584,33 +584,19 @@ class Call(Statement):
         formals = self.symbol_table.formal_generator(self.id_)
         for expr, (formal_name, formal) in zip(self.exprs, formals):
             if formal.by_reference:
-                if isinstance(expr, NameLValue):
-                    ptr = self.symbol_table.lookup(expr.id_).cvalue
+                if expr.gep:
+                    ptr = expr.gep
                     real_params.append(ptr)
                 else:
                     raise NotImplementedError()
             else:
                 expr.codegen()
-                real_params.append(expr.cvalue)
-
-        if call_entry_cvalue.ftype.var_arg:
-            length = 0
-            var_real_params = []
-            for param in real_params:
-                if isinstance(param.type, ir.Aggregate):
-                    contents = param.get_reference()[2: -1]
-                    length += len(contents)
-                    elem_type = param.type.element
-                    for elem in contents:
-                        elem_cvalue = ir.Constant(elem_type, ord(elem))
-                        var_real_params.append(elem_cvalue)
+                if isinstance(expr, StringLiteral):
+                    ptr = expr.gep
+                    real_params.append(ptr)
                 else:
-                    var_real_params.append(param)
-                    length += 1
+                    real_params.append(expr.cvalue)
 
-                length_cvalue = ir.Constant(LLVMTypes.T_INT, length)
-
-            real_params = [length_cvalue] + var_real_params
 
         self.builder.call(call_entry_cvalue, real_params)
 
@@ -1169,6 +1155,7 @@ class LValue(Expr):
     def __init__(self, builder, module, symbol_table):
         super(LValue, self).__init__(builder, module, symbol_table)
         self.load = False
+        self.gep = None
 
 
 class NameLValue(LValue):
@@ -1188,10 +1175,10 @@ class NameLValue(LValue):
         # raise PCLSemError(msg)
 
     def codegen(self):
-        result = self.symbol_table.lookup(self.id_).cvalue
+        self.gep = self.symbol_table.lookup(self.id_).cvalue
         # OPTIMIZE remove redundant loads
-        # if self.load:
-        self.cvalue = self.builder.load(result)
+        if self.load:
+            self.cvalue = self.builder.load(self.gep)
 
     def set_nil(self):
         # Result is a pointer to our type e.g. for integer variable i32 it is *i32
@@ -1228,7 +1215,7 @@ class StringLiteral(LValue):
 
     def __init__(self, literal, builder, module, symbol_table):
         super(StringLiteral, self).__init__(builder, module, symbol_table)
-        self.literal = literal
+        self.literal = literal + '\0'
         self.length = len(self.literal)
 
     def sem(self):
@@ -1242,6 +1229,9 @@ class StringLiteral(LValue):
             ir.ArrayType(
                 LLVMTypes.T_CHAR, self.length), bytearray(
                 self.literal.encode("utf-8")))
+        self.gep = self.builder.alloca(self.cvalue.type)
+        self.builder.store(self.cvalue, self.gep)
+        self.gep = self.builder.bitcast(self.gep, LLVMTypes.T_CHAR.as_pointer())
 
 
 class Deref(LValue):
@@ -1268,6 +1258,7 @@ class Deref(LValue):
 
     def codegen(self):
         self.expr.codegen()
+        self.gep = self.expr.cvalue
         self.cvalue = self.builder.load(self.expr.cvalue)
 
 
@@ -1305,10 +1296,9 @@ class SetExpression(LValue):
 
         if self.expr.stype[1] == BaseType.T_NIL:
             self.lvalue.set_nil()
-        elif hasattr(self.lvalue, 'id_'):
-            result = self.symbol_table.lookup(self.lvalue.id_).cvalue
-            self.builder.store(self.expr.cvalue, result)
-
+        elif self.lvalue.gep:
+            self.builder.store(self.expr.cvalue, self.lvalue.gep)
+    
 
 class LBrack(LValue):
     '''
@@ -1330,5 +1320,7 @@ class LBrack(LValue):
         self.expr.codegen()
         self.lvalue.codegen()
 
-        gep_elem = self.builder.gep(self.lvalue.cvalue, [self.expr.cvalue])
-        self.cvalue = self.builder.load(gep_elem)
+        self.gep = self.builder.gep(self.lvalue.gep, [LLVMConstants.ZERO_INT, self.expr.cvalue])
+        # import pdb; pdb.set_trace()
+
+        self.cvalue = self.builder.load(self.gep)
