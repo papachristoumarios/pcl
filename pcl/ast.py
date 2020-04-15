@@ -577,6 +577,10 @@ class Call(Statement):
         # WIP
         real_params = []
 
+        call_entry_cvalue = self.symbol_table.lookup(self.id_).cvalue
+
+
+
         formals = self.symbol_table.formal_generator(self.id_)
         for expr, (formal_name, formal) in zip(self.exprs, formals):
             if formal.by_reference:
@@ -589,7 +593,24 @@ class Call(Statement):
                 expr.codegen()
                 real_params.append(expr.cvalue)
 
-        call_entry_cvalue = self.symbol_table.lookup(self.id_).cvalue
+        if call_entry_cvalue.ftype.var_arg:
+            length = 0
+            var_real_params = []
+            for param in real_params:
+                if isinstance(param.type, ir.Aggregate):
+                    contents = param.get_reference()[2: -1]
+                    length += len(contents)
+                    elem_type = param.type.element
+                    for elem in contents:
+                        elem_cvalue = ir.Constant(elem_type, ord(elem))
+                        var_real_params.append(elem_cvalue)
+                else:
+                    var_real_params.append(param)
+                    length += 1
+
+                length_cvalue = ir.Constant(LLVMTypes.T_INT, length)
+
+            real_params = [length_cvalue] + var_real_params
 
         self.builder.call(call_entry_cvalue, real_params)
 
@@ -743,6 +764,17 @@ class New(Statement):
 
             # ^t -> t
             self.stype = self.lvalue.stype[1]
+
+    def codegen(self):
+        self.lvalue.codegen()
+
+        if self.expr:
+            self.expr.codegen()
+            raise NotImplementedError()
+        else:
+            self.cvalue = self.builder.alloca(self.lvalue.cvalue.type.pointee)
+            result = self.symbol_table.lookup(self.lvalue.id_).cvalue
+            self.builder.store(self.cvalue, result)
 
 
 class Dispose(Statement):
@@ -1209,7 +1241,7 @@ class StringLiteral(LValue):
         self.cvalue = ir.Constant(
             ir.ArrayType(
                 LLVMTypes.T_CHAR, self.length), bytearray(
-                self.literal.encode("utf8")))
+                self.literal.encode("utf-8")))
 
 
 class Deref(LValue):

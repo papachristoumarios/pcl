@@ -30,7 +30,7 @@ chr* writeBoolean(boolean b) {
 }
 
 chr* writeChar(chr c) {
-  printf("%c\n", c + 'a' - 1);
+  printf("%c", c);
 }
 
 chr* writeReal(real x) {
@@ -42,7 +42,7 @@ chr* writeString(integer len, ...) {
   va_start(valist, len);
   integer i;
   for (i = 0; i < len; i++) {
-      putchar((chr)va_arg(valist, int) + 'a' - 1);
+      printf("%c", va_arg(valist, int));
    }
    printf("\n");
 }
@@ -63,9 +63,4 @@ real ln(real x) {
 
 real pi() {
   return (real)M_PI;
-}
-
-int main() {
-  writeString(3, 1, 2, 3);
-  return 0;
 }

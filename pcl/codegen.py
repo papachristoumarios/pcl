@@ -64,7 +64,6 @@ class PCLCodegen:
         self.binding.initialize_native_target()
         self.binding.initialize_native_asmprinter()
         self._config_llvm()
-        self._create_execution_engine()
 
     def _config_llvm(self):
         self.module = ir.Module()
@@ -74,20 +73,8 @@ class PCLCodegen:
         block = base_func.append_basic_block(name="entry")
         self.builder = ir.IRBuilder(block)
 
-    def _create_execution_engine(self):
-        """
-        Create an ExecutionEngine suitable for JIT code generation on
-        the host CPU.  The engine is reusable for an arbitrary number of
-        modules.
-        """
-        target = self.binding.Target.from_default_triple()
-        target_machine = target.create_target_machine()
-        # And an execution engine with an empty backing module
-        backing_mod = binding.parse_assembly("")
-        engine = binding.create_mcjit_compiler(backing_mod, target_machine)
-        self.engine = engine
 
-    def _compile_ir(self):
+    def compile_ir(self):
         """
         Compile the LLVM IR string with the given engine.
         The compiled module object is returned.
@@ -97,14 +84,26 @@ class PCLCodegen:
         llvm_ir = str(self.module)
         mod = self.binding.parse_assembly(llvm_ir)
         mod.verify()
-        # Now add the module and make sure it is ready for execution
-        self.engine.add_module(mod)
-        self.engine.finalize_object()
-        self.engine.run_static_constructors()
-        return mod
+        self.module = mod
+        self.optimize_module()
+
+        return self.module
+
+    def optimize_module(self, level=2):
+        if level == 0:
+            return
+        elif level < 0 or level >= 3:
+            msg = 'Undefined optimization level: {}'.format(msg)
+            raise PCLCodegenError(msg)
+        self.pmb = binding.PassManagerBuilder()
+        self.pmb.opt_level = level
+
+        self.mpm = binding.ModulePassManager()
+        self.pmb.populate(self.mpm)
+        self.mpm.run(self.module)
 
     def generate_outputs(self, filename):
-        self._compile_ir()
+        self.compile_ir()
         final_code = str(self.module)
         llvm_filename = filename + '.ll'
         obj_filename = filename + '.o'

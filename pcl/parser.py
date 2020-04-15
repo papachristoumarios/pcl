@@ -505,16 +505,9 @@ if __name__ == '__main__':
 
     s = '''
     program yes;
-        var x : integer;
-        var y: ^integer;
+        var x, y : integer;
     begin
-        x := 1;
-        y := @x;
-        x := x + 1;
-        writeInteger(x);
-        writeInteger(y^);
-        dispose y;
-        writeInteger(y^);
+        writeString("HELLO");
     end.
     '''
 
