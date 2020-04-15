@@ -21,14 +21,13 @@ class LLVMTypeSize:
 
 
 class LLVMTypes:
-    T_INT = ir.IntType(4 * LLVMTypeSize.T_INT)
-    T_BOOL = ir.IntType(4 * LLVMTypeSize.T_BOOL)
-    T_CHAR = ir.IntType(4 * LLVMTypeSize.T_CHAR)
+    T_INT = ir.IntType(8 * LLVMTypeSize.T_INT)
+    T_BOOL = ir.IntType(8 * LLVMTypeSize.T_BOOL)
+    T_CHAR = ir.IntType(8 * LLVMTypeSize.T_CHAR)
     T_PROC = ir.VoidType()
-    T_PTR = ir.PointerType(4 * LLVMTypeSize.T_PTR)
+    T_PTR = ir.PointerType(8 * LLVMTypeSize.T_PTR)
     T_REAL = ir.DoubleType()
-    T_NIL = ir.IntType(4).as_pointer()
-    T_STRING = T_CHAR.as_pointer()
+    T_NIL = ir.IntType(8).as_pointer()
 
     mapping = {
         'integer': T_INT,
