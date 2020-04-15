@@ -104,7 +104,7 @@ builtins = [
                 ('writeString',
                  SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_PROC),
                              name_type=NameType.N_PROCEDURE),
-                 (LLVMTypes.T_PROC, []),
+                 (LLVMTypes.T_PROC, [LLVMTypes.T_CHAR.as_pointer()]),
                  [
                      SymbolEntry(stype=(ComposerType.T_CONST_ARRAY, (ComposerType.T_NO_COMP, BaseType.T_CHAR)),
                                  name_type=NameType.N_FORMAL),
@@ -178,8 +178,7 @@ class SymbolTable:
                     ir.IntType(8).as_pointer(),
                     builtin_signature[1])
 
-            has_var_arg = builtin_signature[-1] == []
-            builtin_signature_type = ir.FunctionType(*builtin_signature, var_arg=has_var_arg)
+            builtin_signature_type = ir.FunctionType(*builtin_signature)
             builtin_fn = ir.Function(
                 self.module,
                 builtin_signature_type,
