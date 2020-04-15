@@ -1159,28 +1159,28 @@ class NameLValue(LValue):
         result = self.symbol_table.lookup(self.id_).cvalue
 
         # Convert 0 to the pointee of the pointer (the actual type)
-        nil = self.builder.inttoptr(0, result.type.pointee)
+        nil = self.builder.inttoptr(LLVMConstants.ZERO_INT, result.type.pointee)
 
         # Store value to pointee
         self.builder.store(nil, result)
 
 
 
-class Result(LValue):
+class Result(NameLValue):
     '''
         Holds the result of a function
     '''
 
     def __init__(self, builder, module, symbol_table):
-        super(Result, self).__init__(builder, module, symbol_table)
+        super(Result, self).__init__('result', builder, module, symbol_table)
 
-    def sem(self):
-        result = self.symbol_table.lookup('result')
-        self.stype = result.stype
+    #def sem(self):
+    #    result = self.symbol_table.lookup('result')
+    #    self.stype = result.stype
 
-    def codegen(self):
-        result = self.symbol_table.lookup('result').cvalue
-        self.cvalue = self.builder.load(result)
+    #def codegen(self):
+    #    result = self.symbol_table.lookup('result').cvalue
+    #    self.cvalue = self.builder.load(result)
     
 class StringLiteral(LValue):
     '''
@@ -1260,7 +1260,9 @@ class SetExpression(LValue):
         self.expr.codegen()
         self.lvalue.codegen()
 
-        if hasattr(self.lvalue, 'id_'):
+        if self.expr.stype[1] == BaseType.T_NIL:
+            self.lvalue.set_nil()
+        elif hasattr(self.lvalue, 'id_'):
             result = self.symbol_table.lookup(self.lvalue.id_).cvalue
             self.builder.store(self.expr.cvalue, result)
 
