@@ -68,8 +68,9 @@ class PCLLexer(Lexer):
         DCOLON,
         COMMA,
         # others
-        INT_CONS,
-        REAL_CONS,
+        'INT_CONS',
+        'REAL_CONS',
+        # NUMERIC_CONS,
         CHARACTER,
         NAME,
         STRING,
@@ -107,8 +108,8 @@ class PCLLexer(Lexer):
     COMMA = regex(',')
 
     # "Special" tokens:
-    INT_CONS = r'[0-9]+(?!\.)'
-    REAL_CONS = r"[0-9]+(\.[0-9]+(['E', 'e']['\+','\-']?[0-9]+)?)?"
+    # INT_CONS = r'[0-9]+(?!\.)'
+    NUMERIC_CONS = r"[0-9]+(\.[0-9]+(['E', 'e']['\+','\-']?[0-9]+)?)?"
     NAME = r"(?<!\d\W\_)[^\d\W\_]\w*"
     STRING = r"\"[^\"]*\""
     CHARACTER = r"'(.{0,1}|^$)'"
@@ -118,6 +119,13 @@ class PCLLexer(Lexer):
 
     def NAME(self, t):
         t.type = PCLLexer.keywords.get(t.value, 'NAME')
+        return t
+
+    def NUMERIC_CONS(self, t):
+        if t.value.isdigit():
+            t.type = 'INT_CONS'
+        else:
+            t.type = 'REAL_CONS'
         return t
 
     # Increase line counts upon newlines and comments
