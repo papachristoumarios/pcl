@@ -8,17 +8,8 @@ class LLVMTypeSize:
     # Type sizes in BYTES
     T_BOOL = 1
     T_CHAR = 1
-    T_REAL = 10
     T_PTR = 2
     T_INT = 4
-
-    @staticmethod
-    def get_const_array_size(n, t):
-        if n <= 0:
-            raise PCLCodegenError(
-                'Allocating array with non-positive number of elements')
-        return n * t.value
-
 
 class LLVMTypes:
     T_INT = ir.IntType(8 * LLVMTypeSize.T_INT)

@@ -298,6 +298,24 @@ class LocalHeader(Local):
                     counter += 1
 
             self.body.codegen()
+
+
+            # Guardian return (return is not specified at the end of fcn/proc)
+            # guardian_return_block = header_cvalue.append_basic_block(
+                # self.header.id_ + '_return')
+
+            # self.builder.position_at_start(guardian_return_block)
+
+            try:
+                # Function
+                result_cvalue_ptr = self.symbol_table.lookup('result').cvalue
+                result_cvalue = self.builder.load(result_cvalue_ptr)
+                self.builder.ret(result_cvalue)
+            except PCLSymbolTableError:
+                # Procedure
+                self.builder.ret_void()
+
+
             self.symbol_table.close_scope()
 
 
@@ -583,14 +601,16 @@ class Call(Statement):
 
         formals = self.symbol_table.formal_generator(self.id_)
         for expr, (formal_name, formal) in zip(self.exprs, formals):
+            expr.codegen()
             if formal.by_reference:
+                # import pdb; pdb.set_trace()
                 if expr.gep:
                     ptr = expr.gep
                     real_params.append(ptr)
                 else:
                     raise NotImplementedError()
             else:
-                expr.codegen()
+
                 if isinstance(expr, StringLiteral):
                     ptr = expr.gep
                     real_params.append(ptr)
@@ -696,10 +716,12 @@ class Return(Statement):
 
     def codegen(self):
         try:
+            # Function
             result_cvalue_ptr = self.symbol_table.lookup('result').cvalue
             result_cvalue = self.builder.load(result_cvalue_ptr)
             self.builder.ret(result_cvalue)
         except PCLSymbolTableError:
+            # Procedure
             self.builder.ret_void()
 
 
@@ -1298,7 +1320,7 @@ class SetExpression(LValue):
             self.lvalue.set_nil()
         elif self.lvalue.gep:
             self.builder.store(self.expr.cvalue, self.lvalue.gep)
-    
+
 
 class LBrack(LValue):
     '''
