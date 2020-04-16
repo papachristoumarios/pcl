@@ -68,7 +68,7 @@ class PCLCodegen:
         # Declare builder
         self.builder = ir.IRBuilder(block)
 
-    def postprocess_module(self, level=0):
+    def postprocess_module(self, level=2):
         ''' Module post-processing '''
         self.builder.ret_void()
 

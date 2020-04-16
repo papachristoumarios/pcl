@@ -505,11 +505,18 @@ if __name__ == '__main__':
 
     s = '''
     program yes;
-        var x, y: integer;
-        label u;
+        function iseven(var x: integer) : boolean;
+        begin
+            if x mod 2 = 0 then
+            begin
+                result := true;
+                return;
+            end;
+            result := false;
+            return;
+        end;
     begin
-        u: writeString("yes!");
-        goto u;
+        writeBoolean(iseven(2));
     end.
     '''
 

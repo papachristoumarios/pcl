@@ -744,15 +744,18 @@ class Return(Statement):
 
     def codegen(self):
         return_block = self.builder.append_basic_block()
-        with self.builder.goto_block(return_block):
-            try:
-                # Function
-                result_cvalue_ptr = self.symbol_table.lookup('result').cvalue
-                result_cvalue = self.builder.load(result_cvalue_ptr)
-                self.builder.ret(result_cvalue)
-            except PCLSymbolTableError:
-                # Procedure
-                self.builder.ret_void()
+        self.builder.branch(return_block)
+        self.builder.position_at_start(return_block)
+        try:
+            # Function
+            result_cvalue_ptr = self.symbol_table.lookup('result').cvalue
+            result_cvalue = self.builder.load(result_cvalue_ptr)
+            self.builder.ret(result_cvalue)
+        except PCLSymbolTableError:
+            # Procedure
+            self.builder.ret_void()
+        next_block = self.builder.append_basic_block()
+        self.builder.position_at_start(next_block)
 
 
 class Empty(Statement):
