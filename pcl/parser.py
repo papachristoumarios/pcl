@@ -505,14 +505,15 @@ if __name__ == '__main__':
 
     s = '''
     program yes;
-        var x: integer;
-        procedure sqr(z : integer);
+        var x, y: integer;
+        function sqr(var z : integer) : integer;
         begin
-            z := z * z;
+            result := z * z;
+            return;
         end;
     begin
         x := 2;
-        sqr(x);
+        x := sqr(x);
         writeInteger(x);
     end.
     '''

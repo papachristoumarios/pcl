@@ -281,6 +281,9 @@ class LocalHeader(Local):
                     # counter += 1
             self.symbol_table.open_scope(self.header.id_)
 
+            self.header.codegen()
+
+
             counter = 0
             for formal in self.header.formals:
                 for formal_id in formal.ids:
@@ -437,6 +440,15 @@ class Header(AST):
             result_entry = SymbolEntry(
                 stype=self.func_type.stype,
                 name_type=NameType.N_VAR)
+            self.symbol_table.insert('result', result_entry)
+
+    def codegen(self):
+        if self.func_type:
+            self.func_type.codegen()
+            result_ptr = self.builder.alloca(self.func_type.cvalue)
+            result_entry = SymbolEntry(
+                stype=self.func_type.stype,
+                name_type=NameType.N_VAR, cvalue=result_ptr)
             self.symbol_table.insert('result', result_entry)
 
 
@@ -597,8 +609,6 @@ class Call(Statement):
 
         call_entry_cvalue = self.symbol_table.lookup(self.id_).cvalue
 
-
-
         formals = self.symbol_table.formal_generator(self.id_)
         for expr, (formal_name, formal) in zip(self.exprs, formals):
             expr.codegen()
@@ -617,8 +627,7 @@ class Call(Statement):
                 else:
                     real_params.append(expr.cvalue)
 
-
-        self.builder.call(call_entry_cvalue, real_params)
+        self.cvalue = self.builder.call(call_entry_cvalue, real_params)
 
 
 class If(Statement):
@@ -715,14 +724,16 @@ class Return(Statement):
             pass
 
     def codegen(self):
-        try:
-            # Function
-            result_cvalue_ptr = self.symbol_table.lookup('result').cvalue
-            result_cvalue = self.builder.load(result_cvalue_ptr)
-            self.builder.ret(result_cvalue)
-        except PCLSymbolTableError:
-            # Procedure
-            self.builder.ret_void()
+        return_block = self.builder.append_basic_block()
+        with self.builder.goto_block(return_block):
+            try:
+                # Function
+                result_cvalue_ptr = self.symbol_table.lookup('result').cvalue
+                result_cvalue = self.builder.load(result_cvalue_ptr)
+                self.builder.ret(result_cvalue)
+            except PCLSymbolTableError:
+                # Procedure
+                self.builder.ret_void()
 
 
 class Empty(Statement):
@@ -1222,13 +1233,15 @@ class Result(NameLValue):
     def __init__(self, builder, module, symbol_table):
         super(Result, self).__init__('result', builder, module, symbol_table)
 
-    #def sem(self):
-    #    result = self.symbol_table.lookup('result')
-    #    self.stype = result.stype
+    def sem(self):
+       result = self.symbol_table.lookup('result')
+       self.stype = result.stype
 
-    #def codegen(self):
-    #    result = self.symbol_table.lookup('result').cvalue
-    #    self.cvalue = self.builder.load(result)
+    def codegen(self):
+       self.gep = self.symbol_table.lookup('result').cvalue
+
+       if self.load:
+           self.cvalue = self.builder.load(self.gep)
 
 class StringLiteral(LValue):
     '''
