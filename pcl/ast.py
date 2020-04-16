@@ -44,10 +44,22 @@ class AST(ABC):
             self.__class__.__name__)
         raise NotImplementedError(msg)
 
+    def _sem_decorator(sem_fn):
+        def wrapper(self):
+            if self.stype is None:
+                sem_fn(self)
+            return wrapper
+
     def codegen(self):
         msg = 'codegen method not implemented for {}'.format(
             self.__class__.__name__)
         raise NotImplementedError(msg)
+
+    def _codegen_decorator(codegen_fn):
+        def wrapper(self):
+            if self.cvalue is None:
+                codegen_fn(self)
+            return wrapper
 
     def pipeline(self, *stages):
         for stage in stages:
