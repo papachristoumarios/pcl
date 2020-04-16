@@ -555,6 +555,7 @@ class Statement(AST):
     def codegen(self):
         if self.name:
             self.cvalue = self.builder.append_basic_block(self.name)
+            self.builder.branch(self.cvalue)
             label_entry = SymbolEntry(
                 stype=(
                     ComposerType.T_NO_COMP,
@@ -563,8 +564,12 @@ class Statement(AST):
                 cvalue=self.cvalue)
             self.symbol_table.insert(self.name, label_entry)
             # TODO FIX
-            with self.builder.goto_block(self.cvalue):
-                self.stmt.codegen()
+            # with self.builder.goto_block(self.cvalue):
+            self.builder.position_at_start(self.cvalue)
+            next_block = self.builder.append_basic_block()
+            self.stmt.codegen()
+            self.builder.branch(next_block)
+            self.builder.position_at_start(next_block)
 
 
 class Block(Statement):
@@ -716,11 +721,13 @@ class Goto(Statement):
 
     def codegen(self):
         # TODO fix non terminating block
-        goto_block = self.symbol_table.lookup(self.id_).cvalue
         helper_block = self.builder.append_basic_block()
-        with self.builder.goto_block(helper_block):
-            self.builder.branch(goto_block)
-
+        self.builder.branch(helper_block)
+        self.builder.position_at_start(helper_block)
+        goto_block = self.symbol_table.lookup(self.id_).cvalue
+        self.builder.branch(goto_block)
+        next_block = self.builder.append_basic_block()
+        self.builder.position_at_start(next_block)
 
 class Return(Statement):
     '''

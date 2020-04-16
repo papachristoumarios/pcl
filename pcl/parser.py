@@ -506,17 +506,10 @@ if __name__ == '__main__':
     s = '''
     program yes;
         var x, y: integer;
-        function sqr(var z : integer) : integer;
-        begin
-            result := z * z;
-            if result = 4 then return;
-            else result := result * z;
-
-        end;
+        label u;
     begin
-        x := 2;
-        x := sqr(x);
-        writeInteger(x);
+        u: writeString("yes!");
+        goto u;
     end.
     '''
 
