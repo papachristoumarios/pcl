@@ -509,7 +509,9 @@ if __name__ == '__main__':
         function sqr(var z : integer) : integer;
         begin
             result := z * z;
-            return;
+            if result = 4 then return;
+            else result := result * z;
+
         end;
     begin
         x := 2;
