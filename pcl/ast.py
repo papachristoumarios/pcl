@@ -783,13 +783,13 @@ class New(Statement):
     def sem(self):
         self.lvalue.sem()
         if self.expr:
-            if self.lvalue.stype[0] != ComposerType.T_PTR or self.lvalue.stype[1] != ComposerType.T_VAR_ARRAY:
+            if self.lvalue.stype[0] != ComposerType.T_PTR or self.lvalue.stype[1][0] != ComposerType.T_VAR_ARRAY:
                 raise PCLSemError(
                     'Cannot create new instance of {}'.format(
                         self.lvalue.stype))
 
             self.expr.sem()
-            self.expr.type_check((ComposerType.T_NO_COMP, ComposerType.T_INT))
+            self.expr.type_check((ComposerType.T_NO_COMP, BaseType.T_INT))
 
             # ^array of t -> array [n] of t
             self.stype = (
@@ -808,14 +808,14 @@ class New(Statement):
 
     def codegen(self):
         self.lvalue.codegen()
+        alloca_type = self.lvalue.gep.type.pointee.pointee
 
         if self.expr:
             self.expr.codegen()
-            raise NotImplementedError()
+            self.cvalue = self.builder.alloca(alloca_type, self.expr.cvalue)
         else:
-            self.cvalue = self.builder.alloca(self.lvalue.cvalue.type.pointee)
-            result = self.symbol_table.lookup(self.lvalue.id_).cvalue
-            self.builder.store(self.cvalue, result)
+            self.cvalue = self.builder.alloca(alloca_type)
+        self.builder.store(self.cvalue, self.lvalue.gep)
 
 
 class Dispose(Statement):

@@ -505,18 +505,10 @@ if __name__ == '__main__':
 
     s = '''
     program yes;
-        function iseven(var x: integer) : boolean;
+        var x : array of integer;
+        var y : ^array of integer;
         begin
-            if x mod 2 = 0 then
-            begin
-                result := true;
-                return;
-            end;
-            result := false;
-            return;
-        end;
-    begin
-        writeBoolean(iseven(2));
+            new [1 + 1] y;
     end.
     '''
 

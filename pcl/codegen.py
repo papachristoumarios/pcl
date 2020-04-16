@@ -109,5 +109,6 @@ class PCLCodegen:
         with open(llvm_filename, 'w+') as f:
             f.write(str(self.module))
 
+        # TODO add dynamic linking
         os.system('llc-8 -filetype=obj {}'.format(llvm_filename))
-        os.system('gcc {} builtins.c -lm -o {}'.format(obj_filename, output_filename))
+        os.system('gcc {} libbuiltins.so -Wall -lm -o {}'.format(obj_filename, output_filename))
