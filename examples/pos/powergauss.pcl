@@ -1,0 +1,19 @@
+program powergauss;
+forward function gauss (var x, p: integer) : integer;
+
+function gauss (var x, p : integer) : integer;
+    var temp : integer;
+begin
+    if p = 0 then
+    begin
+        result := 1;
+        return;
+    end;
+    temp := gauss(x, p div 2);
+    result := temp * temp;
+    if p mod 2 = 1 then result := result * x;
+end;
+
+begin
+    writeInteger(gauss(2, 10));
+end.

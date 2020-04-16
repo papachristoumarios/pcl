@@ -1,0 +1,14 @@
+program powernaive;
+    forward function pow(var x, p: integer) : integer;
+    function pow(var x, p: integer) : integer;
+    begin
+        if p = 0 then
+        begin
+            result := 1;
+            return;
+        end else
+        result := x * pow(x, p - 1);
+    end;
+begin
+    writeInteger(pow(2, 10))
+end.
