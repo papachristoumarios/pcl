@@ -12,33 +12,31 @@ typedef double real;
 typedef int8_t boolean;
 typedef int8_t chr;
 
-extern chr* writeInteger(integer);
-extern chr* writeChar(chr);
-extern chr* writeReal(real);
-extern chr* writeBoolean(boolean);
-extern chr* writeString(chr *);
-extern integer readInteger();
-
 // write
 chr* writeInteger(integer n) {
   printf("%d\n", n);
+  return NULL;
 }
 
 chr* writeBoolean(boolean b) {
   (b == 1) ? printf("true") : printf("false");
   printf("\n");
+  return NULL;
 }
 
 chr* writeChar(chr c) {
   printf("%c", c);
+  return NULL;
 }
 
 chr* writeReal(real x) {
   printf("%f\n", x);
+  return NULL;
 }
 
 chr* writeString(chr *s) {
   printf("%s\n", s);
+  return NULL;
 }
 
 

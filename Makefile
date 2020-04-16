@@ -1,8 +1,8 @@
 CC=gcc
-CCFLAGS=-fPIC -shared
+CCFLAGS=-fPIC -shared -Wall -Werror
 
 compiler: pcl/builtins.c
-	$(CC) pcl/builtins.c -o pcl/builtins.so $(CCFLAGS)
+	$(CC) pcl/builtins.c -o pcl/libbuiltins.so $(CCFLAGS)
 	pip install -e .
 
 depend: requirements.txt
@@ -17,4 +17,4 @@ tests:
 	pytest tests/*
 
 clean:
-	rm -rf pcl/builtins.so
+	rm -rf pcl/libbuiltins.so
