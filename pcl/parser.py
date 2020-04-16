@@ -505,14 +505,16 @@ if __name__ == '__main__':
     parser = PCLParser()
 
     s = '''
-    program yes;
-        var x, y: ^integer;
-        var z, u: integer;
-    begin
-        z := 100;
-        x := @z;
-        if true = true then writeString("FD");
-    end.
+        program string_length;
+        function strlen (var s: array of char) : integer;
+        begin
+            result := 0;
+            while s[result] <> '\0' do result := result + 1;
+        end;
+
+        begin
+            writeInteger(strlen("HELLO"));
+        end.
     '''
 
     tokens = list(lexer.tokenize(s))
@@ -525,4 +527,5 @@ if __name__ == '__main__':
     program.pprint()
     program.print_module()
 
+    parser.codegen.postprocess_module()
     parser.codegen.generate_outputs('toy')

@@ -1,7 +1,8 @@
 import argparse
 import sys
+import os
 
-from pcl import PCLCError
+from pcl import PCLCError, PCLError
 from pcl import PCLLexer
 from pcl import PCLParser
 from pcl import PCLCodegen
@@ -28,6 +29,7 @@ def get_argparser():
         type=str,
         help='Input filename')
     argparser.add_argument('-O', default=0, type=int, help='Optimization level')
+    argparser.add_argument('--pipeline', nargs='+', default=['lex', 'parse', 'sem', 'codegen'])
     argparser.add_argument(
         '-f',
         action='store_true',
@@ -82,14 +84,12 @@ if __name__ == '__main__':
                     program = f.read()
             else:
                 program = sys.stdin.read()
+                args.filename = 'a.pcl'
         else:
             raise PCLCError('Multiple Inputs defined')
             exit(1)
 
     driver = PCLCDriver(program)
-
-    pipeline = ['lex', 'parse', 'sem', 'pprint', 'print_module', 'pprint']
-
 
     pipeline_funcs = {
         'lex' : driver.lex,
@@ -97,14 +97,24 @@ if __name__ == '__main__':
         'sem' : driver.sem,
         'pprint' : driver.pprint,
         'codegen' : driver.codegen,
-        'print_module': driver.print_module
     }
 
+    for stage in args.pipeline:
+        try:
+            pipeline_funcs[stage]()
+        except PCLError:
+            msg = 'Invalid pipeline'
+            raise PCLCError(msg)
 
-    for stage in pipeline:
-        pipeline_funcs[stage]()
-
-    if args.f ^ args.i:
-        exit(0)
-
-    exit(0)
+    if 'codegen' == args.pipeline[-1]:
+        driver.parser.codegen.postprocess_module(level=args.O)
+        name = os.path.splitext(args.filename)[0]
+        if args.i:
+            # IR to stdout
+            print(driver.parser.codegen.module)
+        elif args.f:
+            # Object file to stdout
+            driver.parser.codegen.generate_outputs(name, llc_to_stdout=True)
+        else:
+            driver.parser.codegen.generate_outputs(name, llc_to_stdout=False)
+    

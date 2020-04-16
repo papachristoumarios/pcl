@@ -2,6 +2,7 @@ from ctypes import CFUNCTYPE, c_double
 from llvmlite import ir, binding
 from pcl.error import PCLCodegenError
 import os
+from subprocess import check_output, run
 
 
 class LLVMTypeSize:
@@ -103,15 +104,16 @@ class PCLCodegen:
         # Run optimizations
         self.mpm.run(self.module)
 
-    def generate_outputs(self, filename):
-        self.postprocess_module()
-        llvm_filename = filename + '.ll'
-        obj_filename = filename + '.o'
-        output_filename = filename + '.out'
-
+    def generate_outputs(self, filename, llc_to_stdout=False):
+        llvm_filename = filename + '.imm'
         with open(llvm_filename, 'w+') as f:
             f.write(str(self.module))
+        if llc_to_stdout:
+            os.system('llc -o - -filetype=obj {}'.format(llvm_filename))
+            os.remove(llvm_filename)
+        else:
+            obj_filename = filename + '.o'
+            output_filename = filename + '.out'
 
-        # TODO add dynamic linking
-        os.system('llc-8 -filetype=obj {}'.format(llvm_filename))
-        os.system('gcc {} libbuiltins.so -Wall -lm -o {}'.format(obj_filename, output_filename))
+            os.system('llc -filetype=obj {}'.format(llvm_filename))
+            # os.system('gcc {} libbuiltins.so -Wall -lm -o {}'.format(obj_filename, output_filename))

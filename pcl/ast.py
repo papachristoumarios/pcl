@@ -1139,7 +1139,7 @@ class CompOp(RValue):
 
         cmp_op = LLVMOperators.get_op(self.op)
 
-        if arithmetic or boolean:
+        if arithmetic:
             if self.lhs.stype == real_type and self.rhs.stype == int_type:
                 lhs_cvalue = self.lhs.cvalue
                 rhs_cvalue = self.builder.sitofp(
@@ -1159,9 +1159,9 @@ class CompOp(RValue):
                 self.cvalue = self.builder.fcmp_ordered(
                     cmp_op, lhs_cvalue, rhs_cvalue)
         elif self.op in ['=', '<>']:
-                lhs_cvalue = self.builder.ptrtoint(self.lhs.cvalue, LLVMTypes.T_INT)
-                rhs_cvalue = self.builder.ptrtoint(self.rhs.cvalue, LLVMTypes.T_INT)
-                self.cvalue = self.builder.icmp_signed(cmp_op, lhs_cvalue, rhs_cvalue)
+                # lhs_cvalue = self.builder.ptrtoint(self.lhs.cvalue, LLVMTypes.T_INT)
+                # rhs_cvalue = self.builder.ptrtoint(self.rhs.cvalue, LLVMTypes.T_INT)
+                self.cvalue = self.builder.icmp_signed(cmp_op, self.lhs.cvalue, self.rhs.cvalue)
 
 
 class LogicOp(RValue):
