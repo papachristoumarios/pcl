@@ -252,6 +252,7 @@ class PCLParser(Parser):
 
     @_('NEW LSQUARE expr RSQUARE lvalue')
     def stmt(self, p):
+        p.lvalue.load = True
         return New(expr=p.expr, lvalue=p.lvalue, builder=self.builder,
                    module=self.module, symbol_table=self.symbol_table)
 
@@ -505,12 +506,12 @@ if __name__ == '__main__':
 
     s = '''
     program yes;
-        var x : array of integer;
-        var y : ^array of integer;
-        begin
-            new [1 + 1] y;
-            dispose [] y;
-
+        var x, y: ^integer;
+        var z, u: integer;
+    begin
+        z := 100;
+        x := @z;
+        if true = true then writeString("FD");
     end.
     '''
 

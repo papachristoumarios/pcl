@@ -629,6 +629,9 @@ class Call(Statement):
         formals = self.symbol_table.formal_generator(self.id_)
         for expr, (formal_name, formal) in zip(self.exprs, formals):
             expr.codegen()
+
+            # TODO handle var array
+
             if formal.by_reference:
                 # import pdb; pdb.set_trace()
                 if expr.gep:
@@ -808,14 +811,16 @@ class New(Statement):
 
     def codegen(self):
         self.lvalue.codegen()
-        alloca_type = self.lvalue.gep.type.pointee.pointee
+        # alloca_type = self.lvalue.gep.type.pointee.pointee
 
         if self.expr:
             self.expr.codegen()
-            self.cvalue = self.builder.alloca(alloca_type, self.expr.cvalue)
+            self.cvalue = self.builder.alloca(self.lvalue.gep.type.pointee.pointee.pointee, self.expr.cvalue)
+            # import pdb; pdb.set_trace()
+            self.builder.store(self.cvalue, self.lvalue.cvalue)
         else:
-            self.cvalue = self.builder.alloca(alloca_type)
-        self.builder.store(self.cvalue, self.lvalue.gep)
+            self.cvalue = self.builder.alloca(self.lvalue.gep.type.pointee.pointee)
+            self.builder.store(self.cvalue, self.lvalue.gep)
 
 
 class Dispose(Statement):
@@ -1127,8 +1132,14 @@ class CompOp(RValue):
             self.lhs.stype in arithmetic_types) and (
             self.rhs.stype in arithmetic_types)
 
-        # TODO ADD ARRAY COMPARISON
-        if arithmetic:
+        boolean = (
+            self.lhs.stype == (ComposerType.T_NO_COMP, BaseType.T_BOOL)) and (
+            self.rhs.stype == (ComposerType.T_NO_COMP, BaseType.T_BOOL))
+
+
+        cmp_op = LLVMOperators.get_op(self.op)
+
+        if arithmetic or boolean:
             if self.lhs.stype == real_type and self.rhs.stype == int_type:
                 lhs_cvalue = self.lhs.cvalue
                 rhs_cvalue = self.builder.sitofp(
@@ -1141,14 +1152,16 @@ class CompOp(RValue):
                 lhs_cvalue = self.lhs.cvalue
                 rhs_cvalue = self.rhs.cvalue
 
-            cmp_op = LLVMOperators.get_op(self.op)
-
-            if self.lhs.stype == int_type and self.rhs.stype == int_type:
+            if (self.lhs.stype == int_type and self.rhs.stype == int_type) or boolean:
                 self.cvalue = self.builder.icmp_signed(
                     cmp_op, lhs_cvalue, rhs_cvalue)
             else:
                 self.cvalue = self.builder.fcmp_ordered(
                     cmp_op, lhs_cvalue, rhs_cvalue)
+        elif self.op in ['=', '<>']:
+                lhs_cvalue = self.builder.ptrtoint(self.lhs.cvalue, LLVMTypes.T_INT)
+                rhs_cvalue = self.builder.ptrtoint(self.rhs.cvalue, LLVMTypes.T_INT)
+                self.cvalue = self.builder.icmp_signed(cmp_op, lhs_cvalue, rhs_cvalue)
 
 
 class LogicOp(RValue):
@@ -1377,7 +1390,12 @@ class LBrack(LValue):
         self.expr.codegen()
         self.lvalue.codegen()
 
-        self.gep = self.builder.gep(self.lvalue.gep, [LLVMConstants.ZERO_INT, self.expr.cvalue])
         # import pdb; pdb.set_trace()
+        if self.lvalue.stype[0] == ComposerType.T_VAR_ARRAY:
+            # Go one up
+            temp = self.builder.load(self.lvalue.gep)
+            self.gep = self.builder.gep(temp, [self.expr.cvalue])
+        else:
+            self.gep = self.builder.gep(self.lvalue.gep, [LLVMConstants.ZERO_INT, self.expr.cvalue])
 
         self.cvalue = self.builder.load(self.gep)

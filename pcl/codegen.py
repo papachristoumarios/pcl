@@ -6,14 +6,17 @@ import os
 
 class LLVMTypeSize:
     # Type sizes in BYTES
-    T_BOOL = 1
     T_CHAR = 1
     T_PTR = 2
     T_INT = 4
 
 class LLVMTypes:
     T_INT = ir.IntType(8 * LLVMTypeSize.T_INT)
-    T_BOOL = ir.IntType(8 * LLVMTypeSize.T_BOOL)
+
+    # Bool is i1 here (there is no need to be i8)
+    # Moreover it is a waste of time to use trunc and zext
+    T_BOOL = ir.IntType(1)
+
     T_CHAR = ir.IntType(8 * LLVMTypeSize.T_CHAR)
     T_PROC = ir.VoidType()
     T_PTR = ir.PointerType(8 * LLVMTypeSize.T_PTR)
