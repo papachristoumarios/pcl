@@ -832,7 +832,7 @@ class Dispose(Statement):
         self.lvalue.sem()
 
         if self.brackets:
-            if self.lvalue.stype[0] != ComposerType.T_PTR or self.lvalue.stype[1] != ComposerType.T_VAR_ARRAY:
+            if self.lvalue.stype[0] != ComposerType.T_PTR or self.lvalue.stype[1][0] != ComposerType.T_VAR_ARRAY:
                 raise PCLSemError(
                     'Cannot dispose instance of {}'.format(
                         self.lvalue.stype))

@@ -509,6 +509,8 @@ if __name__ == '__main__':
         var y : ^array of integer;
         begin
             new [1 + 1] y;
+            dispose [] y;
+
     end.
     '''
 
