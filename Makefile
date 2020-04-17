@@ -13,8 +13,8 @@ depend: requirements.txt
 create_env:
 	conda create --name pcl
 
-tests:
-	pytest tests/*
+test:
+	cd tests && pytest -s * 
 
 clean:
 	rm -rf pcl/libbuiltins.so
