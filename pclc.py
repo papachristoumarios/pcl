@@ -80,9 +80,10 @@ if __name__ == '__main__':
     else:
         if (args.filename != '') ^ args.i ^ args.f:
             if args.filename != '':
-                with open(args.filename) as f:
+                with open(args.filename, encoding='unicode-escape') as f:
                     program = f.read()
             else:
+                sys.stdin.reconfigure(encoding='unicode-escape')
                 program = sys.stdin.read()
                 args.filename = 'a.pcl'
         else:
