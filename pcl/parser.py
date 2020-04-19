@@ -513,11 +513,14 @@ if __name__ == '__main__':
 
     s = '''
         program custom_str;
-        var x: array [2] of char;
-        var y: ^array [2] of char;
+        var x: array  of char;
+        var y: ^array  of char;
+
+        procedure foo(var u: array [2] of char);
         begin
-            x := "a";
-            writeString(x);
+            writeString(u);
+        end;
+        begin
         end.
 
     '''
