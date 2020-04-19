@@ -1,0 +1,22 @@
+program yes_and_no;
+
+forward procedure no();
+forward procedure yes();
+
+var x : integer;
+
+procedure yes();
+begin
+    writeString("YES");
+    no();
+end;
+
+procedure no();
+begin
+    writeString("NO");
+    yes();
+end;
+
+begin
+    yes();
+end.

@@ -1,0 +1,12 @@
+program foo;
+
+var x: array [2] of integer;
+var z: array [2] of char;
+
+begin
+  x[0] := 0;
+  x[1] := 3;
+  z[0] := 'a';
+  z[1] := '\0';
+  writeString(z);
+end.

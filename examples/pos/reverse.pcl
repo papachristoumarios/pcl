@@ -1,0 +1,30 @@
+program reverse;
+
+    var r: array [6] of char;
+
+    function strlen (var s : array of char) : integer;
+    begin
+        result := 0;
+        while s[result] <> '\0' do result := result + 1
+    end;
+
+    procedure reverse (var s : array of char);
+        var i, l : integer;
+        var tmp: char;
+    begin
+        l := strlen(s);
+        i := 0;
+        while i < l div 2 do
+        begin
+          tmp := s[i];
+          s[i] := s[l-i-1];
+          s[l-i-1] := tmp;
+          i := i+1;
+        end;
+    end;
+
+begin
+    r := "Hello";
+    reverse(r);
+    writeString(r);
+end.

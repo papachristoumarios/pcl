@@ -5,8 +5,9 @@ program reverse;
         while s[result] <> '\0' do result := result + 1;
     end;
 
+    var x: array [4] of char;
 
     begin
-        writeInteger(strlen("HELLO"));
-
+        x := "abc";
+        writeInteger(strlen("abc"));
     end.

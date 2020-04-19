@@ -1,0 +1,24 @@
+program array3;
+
+var x: array [2] of integer;
+
+procedure print_array(var z: array of integer; len: integer);
+  var i: integer;
+begin
+    i := 0;
+    while i < len do
+    begin
+      writeString("Position: ");
+      writeInteger(i);
+      writeString(" Value: ");
+      writeInteger(z[i]);
+      writeString("\n");
+      i := i + 1;
+    end;
+end;
+
+begin
+  x[0] := 1;
+  x[1] := 2;
+  print_array(x, 2);
+end.
