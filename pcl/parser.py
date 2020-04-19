@@ -512,28 +512,14 @@ if __name__ == '__main__':
     parser = PCLParser()
 
     s = '''
-        program var_array_2;
-
-        forward procedure no();
-        forward procedure yes();
-
-        var x : integer;
-
-        procedure yes();
+        program custom_str;
+        var x: array [2] of char;
+        var y: ^array [2] of char;
         begin
-            writeString("YES");
-            no();
-        end;
-
-        procedure no();
-        begin
-            writeString("NO");
-            yes();
-        end;
-
-        begin
-            moo();
+            x := "a";
+            writeString(x);
         end.
+
     '''
 
     tokens = list(lexer.tokenize(s))

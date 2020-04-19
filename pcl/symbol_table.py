@@ -54,7 +54,7 @@ class NameType(Enum):
 
 
 class SymbolEntry:
-    def __init__(self, stype, name_type, cvalue=None, by_reference=None):
+    def __init__(self, stype, name_type, cvalue=None, by_reference=False):
         self.stype = stype
         self.name_type = name_type
         self.offset = None
@@ -106,8 +106,8 @@ builtins = [
                              name_type=NameType.N_PROCEDURE),
                  (LLVMTypes.T_PROC, [LLVMTypes.T_CHAR.as_pointer()]),
                  [
-                     SymbolEntry(stype=(ComposerType.T_CONST_ARRAY, (ComposerType.T_NO_COMP, BaseType.T_CHAR)),
-                                 name_type=NameType.N_FORMAL),
+                     SymbolEntry(stype=((ComposerType.T_VAR_ARRAY, (ComposerType.T_NO_COMP, BaseType.T_CHAR))),
+                                 name_type=NameType.N_FORMAL, by_reference=True),
 
                  ]),
              ('readInteger',

@@ -533,7 +533,7 @@ class Formal(AST):
 
     def sem(self):
         self.type_.sem()
-        if self.type_.stype[0] in [ComposerType.T_CONST_ARRAY, ComposerType.T_VAR_ARRAY] and self.by_reference:
+        if self.type_.stype[0] in [ComposerType.T_CONST_ARRAY, ComposerType.T_VAR_ARRAY] and (not self.by_reference):
             msg = 'Arrays are not allowed to pass by value'
             self.raise_exception_helper(msg, PCLSemError)
 
@@ -701,11 +701,11 @@ class Call(Statement):
         formals = self.symbol_table.formal_generator(self.id_)
         for expr, (formal_name, formal) in zip(self.exprs, formals):
             expr.codegen()
-
             if formal.by_reference:
-                # import pdb; pdb.set_trace()
                 if expr.gep:
                     ptr = expr.gep
+                    if isinstance(expr.gep.type.pointee, ir.ArrayType):
+                        ptr = self.builder.bitcast(ptr, ir.PointerType(expr.gep.type.pointee.element))
                     real_params.append(ptr)
                 else:
                     raise NotImplementedError()

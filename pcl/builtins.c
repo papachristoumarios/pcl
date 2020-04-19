@@ -39,6 +39,10 @@ chr* writeString(chr *s) {
   return NULL;
 }
 
+chr* writeStream(chr *s) {
+  printf("%s\n", s);
+  return NULL;
+}
 
 // read
 integer readInteger() {
