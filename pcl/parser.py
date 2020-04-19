@@ -57,7 +57,7 @@ class PCLParser(Parser):
     def get_lineno(self, p):
         try:
             return p.lineno
-        except:
+        except AttributeError:
             return -1
 
     @_('PROGRAM NAME SEMICOLON body COLON')
