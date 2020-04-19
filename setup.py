@@ -1,7 +1,12 @@
 import setuptools
+import os
+from Cython.Build import cythonize
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
+
+
+cythonizeable_packages = [os.path.join(pkg, '*.py') for pkg in setuptools.find_packages()]
 
 setuptools.setup(
     name="pcl",

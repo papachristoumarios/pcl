@@ -14,13 +14,12 @@ typedef int8_t chr;
 
 // write
 chr* writeInteger(integer n) {
-  printf("%d\n", n);
+  printf("%d", n);
   return NULL;
 }
 
 chr* writeBoolean(boolean b) {
-  (b == 1) ? printf("true") : printf("false");
-  printf("\n");
+  printf("%d", b);
   return NULL;
 }
 
@@ -30,12 +29,12 @@ chr* writeChar(chr c) {
 }
 
 chr* writeReal(real x) {
-  printf("%f\n", x);
+  printf("%f", x);
   return NULL;
 }
 
 chr* writeString(chr *s) {
-  printf("%s\n", s);
+  printf("%s", s);
   return NULL;
 }
 

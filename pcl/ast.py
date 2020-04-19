@@ -1,4 +1,5 @@
 import json
+import sys
 from abc import ABC, abstractmethod
 from collections import deque
 from llvmlite import ir, binding
@@ -43,8 +44,8 @@ class AST(ABC):
         pass
 
     def raise_exception_helper(self, msg, exception=PCLSemError):
-        msg = '{} at line {}: {}'.format(self.__class__.__name__, self.lineno, msg)
-        raise exception(msg)
+        msg_new = '{} at line {}: {}'.format(self.__class__.__name__, self.lineno, msg)
+        raise exception(msg_new)
 
     def sem(self):
         msg = 'sem method not implemented for {}'.format(
@@ -98,25 +99,26 @@ class AST(ABC):
             Pretty printing of a node's contents and
             its sucessors. Call it with root.pprint()
         '''
-        print(indent * ' ', end='')
-        print(type(self))
+        sys.stdout.write('{}{}'.format(indent * ' ', type(self)))
+        # print(indent * ' ', end='')
+        # print(type(self))
         d = vars(self)
         for k, v in d.items():
 
             if k not in ['module', 'builder', 'symbol_table']:
                 if isinstance(v, AST):
-                    print((indent - 1) * ' ', end='')
+                    sys.stdout.write((indent - 1) * ' ')
                     v.pprint(indent + 1)
                 elif isinstance(v, deque):
                     for x in v:
-                        print((indent - 1) * ' ', end='')
+                        sys.stdout.write((indent - 1) * ' ')
                         if isinstance(x, AST):
                             x.pprint(indent + 1)
                         else:
-                            print((indent + 1) * ' ' + x)
+                            sys.stdout.write((indent + 1) * ' ' + x + '\n')
                 else:
-                    print((indent + 2) * ' ', end='')
-                    print('{} : {}'.format(k, v))
+                    sys.stdout.write((indent + 2) * ' ')
+                    sys.stdout.write('{} : {}\n'.format(k, v))
 
 
 class Program(AST):
@@ -581,9 +583,9 @@ class ArrayType(Type):
 
     def sem(self):
         self.type_.sem()
-        if self.length >= 0:
+        if self.length > 0:
             self.stype = (ComposerType.T_CONST_ARRAY, self.type_.stype)
-        elif self.length == -1:
+        elif self.length == 0:
             self.stype = (ComposerType.T_VAR_ARRAY, self.type_.stype)
         else:
             msg = 'Negative length specified'
@@ -591,10 +593,7 @@ class ArrayType(Type):
 
     def codegen(self):
         self.type_.codegen()
-        if self.length >= 0:
-            self.cvalue = ir.ArrayType(self.type_.cvalue, self.length)
-        elif self.length == -1:
-            self.cvalue = ir.PointerType(self.type_.cvalue)
+        self.cvalue = ir.ArrayType(self.type_.cvalue, self.length)
 
 
 class Statement(AST):
@@ -885,14 +884,14 @@ class New(Statement):
         self.lvalue.codegen()
         # alloca_type = self.lvalue.gep.type.pointee.pointee
 
-        if self.expr:
-            self.expr.codegen()
-            self.cvalue = self.builder.alloca(self.lvalue.gep.type.pointee.pointee.pointee, self.expr.cvalue)
-            # import pdb; pdb.set_trace()
-            self.builder.store(self.cvalue, self.lvalue.cvalue)
-        else:
-            self.cvalue = self.builder.alloca(self.lvalue.gep.type.pointee.pointee)
-            self.builder.store(self.cvalue, self.lvalue.gep)
+        # if self.expr:
+        #     self.expr.codegen()
+        #     self.cvalue = self.builder.alloca(self.lvalue.gep.type.pointee.pointee.pointee, self.expr.cvalue)
+        #     # import pdb; pdb.set_trace()
+        #     self.builder.store(self.cvalue, self.lvalue.cvalue)
+        # else:
+        self.cvalue = self.builder.alloca(self.lvalue.gep.type.pointee.pointee)
+        self.builder.store(self.cvalue, self.lvalue.gep)
 
 
 class Dispose(Statement):
@@ -1372,7 +1371,6 @@ class StringLiteral(LValue):
                 self.literal.encode("utf-8")))
         self.gep = self.builder.alloca(self.cvalue.type)
         self.builder.store(self.cvalue, self.gep)
-        self.gep = self.builder.bitcast(self.gep, LLVMTypes.T_CHAR.as_pointer())
 
 
 class Deref(LValue):
@@ -1464,13 +1462,13 @@ class LBrack(LValue):
     def codegen(self):
         self.expr.codegen()
         self.lvalue.codegen()
+        #
+        # if self.lvalue.stype[0] == ComposerType.T_VAR_ARRAY:
+        #
+        #     # Go one up
+        #     temp = self.builder.load(self.lvalue.gep)
+        #     self.gep = self.builder.gep(temp, [self.expr.cvalue], inbounds=True)
 
-        # import pdb; pdb.set_trace()
-        if self.lvalue.stype[0] == ComposerType.T_VAR_ARRAY:
-            # Go one up
-            temp = self.builder.load(self.lvalue.gep)
-            self.gep = self.builder.gep(temp, [self.expr.cvalue], inbounds=True)
-        else:
-            self.gep = self.builder.gep(self.lvalue.gep, [LLVMConstants.ZERO_INT, self.expr.cvalue], inbounds=True)
+        self.gep = self.builder.gep(self.lvalue.gep, [LLVMConstants.ZERO_INT, self.expr.cvalue])
 
         self.cvalue = self.builder.load(self.gep)

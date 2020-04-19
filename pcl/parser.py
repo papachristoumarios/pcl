@@ -207,7 +207,7 @@ class PCLParser(Parser):
 
     @_('ARRAY OF vartype')
     def vartype(self, p):
-        return ArrayType(length=-1, type_=p.vartype, builder=self.builder,
+        return ArrayType(length=0, type_=p.vartype, builder=self.builder,
                          module=self.module, symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
     @_('EXP vartype')
@@ -513,14 +513,18 @@ if __name__ == '__main__':
 
     s = '''
         program custom_str;
-        var x: array  of char;
-        var y: ^array  of char;
-
+        var x : integer;
         procedure foo(var u: array [2] of char);
         begin
             writeString(u);
         end;
+
+
         begin
+            x := readInteger();
+            writeInteger(x);
+            writeChar('\n');
+            writeInteger(x);
         end.
 
     '''

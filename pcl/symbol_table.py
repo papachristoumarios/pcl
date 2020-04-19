@@ -104,7 +104,7 @@ builtins = [
                 ('writeString',
                  SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_PROC),
                              name_type=NameType.N_PROCEDURE),
-                 (LLVMTypes.T_PROC, [LLVMTypes.T_CHAR.as_pointer()]),
+                 (LLVMTypes.T_PROC, [ir.ArrayType(LLVMTypes.T_CHAR, 0).as_pointer()]),
                  [
                      SymbolEntry(stype=((ComposerType.T_VAR_ARRAY, (ComposerType.T_NO_COMP, BaseType.T_CHAR))),
                                  name_type=NameType.N_FORMAL, by_reference=True),
@@ -249,7 +249,7 @@ class SymbolTable:
             raise PCLSymbolTableError('Formals lists do not exist')
         self.formals[-1].insert(header, formal, t)
 
-    def lookup_formal(self, header, formal):
+    def lookup_formal(self, header, formal, last_scope=False):
         if len(self.formals) == 0:
             raise PCLSymbolTableError('Formal scopes do not exist')
 

@@ -90,7 +90,7 @@ class PCLCodegen:
         if level == 0:
             return
         elif level < 0 or level >= 3:
-            msg = 'Undefined optimization level: {}'.format(msg)
+            msg = 'Undefined optimization level: {}'.format(level)
             raise PCLCodegenError(msg)
 
         # Initialize pass manager builder
