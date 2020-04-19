@@ -1458,8 +1458,8 @@ class LBrack(LValue):
         if self.lvalue.stype[0] == ComposerType.T_VAR_ARRAY:
             # Go one up
             temp = self.builder.load(self.lvalue.gep)
-            self.gep = self.builder.gep(temp, [self.expr.cvalue])
+            self.gep = self.builder.gep(temp, [self.expr.cvalue], inbounds=True)
         else:
-            self.gep = self.builder.gep(self.lvalue.gep, [LLVMConstants.ZERO_INT, self.expr.cvalue])
+            self.gep = self.builder.gep(self.lvalue.gep, [LLVMConstants.ZERO_INT, self.expr.cvalue], inbounds=True)
 
         self.cvalue = self.builder.load(self.gep)
