@@ -159,7 +159,7 @@ class PCLParser(Parser):
         return Formal(
             ids=p.id_list,
             type_=p.vartype,
-            by_reference=False,
+            by_reference=True,
             builder=self.builder,
             module=self.module,
             symbol_table=self.symbol_table)
@@ -169,7 +169,7 @@ class PCLParser(Parser):
         return Formal(
             ids=p.id_list,
             type_=p.vartype,
-            by_reference=True,
+            by_reference=False,
             builder=self.builder,
             module=self.module,
             symbol_table=self.symbol_table)
@@ -505,15 +505,27 @@ if __name__ == '__main__':
     parser = PCLParser()
 
     s = '''
-        program string_length;
-        function strlen (var s: array of char) : integer;
+        program var_array_2;
+
+        forward procedure no();
+        forward procedure yes();
+
+        var x : integer;
+        
+        procedure yes();
         begin
-            result := 0;
-            while s[result] <> '\0' do result := result + 1;
+            writeString("YES");
+            no();
+        end;
+
+        procedure no();
+        begin
+            writeString("NO");
+            yes();
         end;
 
         begin
-            writeInteger(strlen("HELLO"));
+            yes();
         end.
     '''
 

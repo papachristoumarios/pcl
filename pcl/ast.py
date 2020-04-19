@@ -13,7 +13,7 @@ class AST(ABC):
         The Abstract Base Class for the AST Node
     '''
 
-    def __init__(self, builder, module, symbol_table):
+    def __init__(self, builder, module, symbol_table, lineno=-1):
         '''
             AST Initializer
             Args:
@@ -36,8 +36,15 @@ class AST(ABC):
         # LLVM Value for codegen
         self.cvalue = None
 
+        # Keep line number
+        self.lineno = lineno
+
     def eval(self):
         pass
+
+    def raise_exception_helper(self, msg, exception=PCLSemError):
+        msg = 'Line {}: {}'.format(self.lineno, msg)
+        raise exception(msg)
 
     def sem(self):
         msg = 'sem method not implemented for {}'.format(
@@ -205,9 +212,6 @@ class LocalHeader(Local):
         # Open function scope
         self.symbol_table.open_scope(self.header.id_)
 
-        # Needed for forward declaration
-        self.symbol_table.insert(self.header.id_, header_name_entry)
-
         # Register header locals
         self.header.sem()
         for formal in self.header.formals:
@@ -248,25 +252,29 @@ class LocalHeader(Local):
         header_type_cvalue = ir.FunctionType(
             header_return_cvalue, formal_types_cvalues, var_arg=False)
 
-        header_cvalue = ir.Function(
-            self.module,
-            header_type_cvalue,
-            name=self.header.id_)
+        try:
+            header_entry = self.symbol_table.lookup('forward_' + self.header.id_)
+            header_cvalue = header_entry.cvalue
+        except PCLSymbolTableError:
+            header_cvalue = ir.Function(
+                self.module,
+                header_type_cvalue,
+                name=self.header.id_)
 
-        if self.header.func_type:
-            header_entry = SymbolEntry(
-                stype=self.header.func_type.stype,
-                name_type=NameType.N_FUNCTION,
-                cvalue=header_cvalue)
-        else:
-            header_entry = SymbolEntry(
-                stype=(
-                    ComposerType.T_NO_COMP,
-                    BaseType.T_PROC),
-                name_type=NameType.N_PROCEDURE,
-                cvalue=header_cvalue)
+            if self.header.func_type:
+                header_entry = SymbolEntry(
+                    stype=self.header.func_type.stype,
+                    name_type=NameType.N_FUNCTION,
+                    cvalue=header_cvalue)
+            else:
+                header_entry = SymbolEntry(
+                    stype=(
+                        ComposerType.T_NO_COMP,
+                        BaseType.T_PROC),
+                    name_type=NameType.N_PROCEDURE,
+                    cvalue=header_cvalue)
 
-        self.symbol_table.insert(self.header.id_, header_entry)
+            self.symbol_table.insert(self.header.id_, header_entry)
 
         header_args = header_cvalue.args
 
@@ -423,7 +431,49 @@ class Forward(Local):
                     'forward_' + self.header.id_, formal_id, formal_entry)
 
     def codegen(self):
-        pass
+        # Infer function type (signature)
+        if self.header.func_type:
+            # function
+            self.header.func_type.codegen()
+            header_return_cvalue = self.header.func_type.cvalue
+        else:
+            header_return_cvalue = LLVMTypes.T_PROC
+
+        formal_types_cvalues = []
+
+        # Infer formal parameter types
+        for formal in self.header.formals:
+            formal.type_.codegen()
+            for formal_id in formal.ids:
+                if formal.by_reference:
+                    formal_types_cvalues.append(
+                        formal.type_.cvalue.as_pointer())
+                else:
+                    formal_types_cvalues.append(formal.type_.cvalue)
+
+        header_type_cvalue = ir.FunctionType(
+            header_return_cvalue, formal_types_cvalues, var_arg=False)
+
+        header_cvalue = ir.Function(
+            self.module,
+            header_type_cvalue,
+            name=self.header.id_)
+
+        if self.header.func_type:
+            header_entry = SymbolEntry(
+                stype=self.header.func_type.stype,
+                name_type=NameType.N_FUNCTION,
+                cvalue=header_cvalue)
+        else:
+            header_entry = SymbolEntry(
+                stype=(
+                    ComposerType.T_NO_COMP,
+                    BaseType.T_PROC),
+                name_type=NameType.N_PROCEDURE,
+                cvalue=header_cvalue)
+
+        self.symbol_table.insert('forward_' + self.header.id_, header_entry)
+
 
 
 class Header(AST):
@@ -481,6 +531,10 @@ class Formal(AST):
 
     def sem(self):
         self.type_.sem()
+        if self.type_.stype[0] in [ComposerType.T_CONST_ARRAY, ComposerType.T_VAR_ARRAY] and self.by_reference:
+            msg = 'Arrays are not allowed to pass by value'
+            raise PCLSemError(msg)
+
         self.stype = self.type_.stype
 
 
@@ -601,7 +655,13 @@ class Call(Statement):
         # be forward
         self.symbol_table.needs_forward_declaration(self.id_)
 
-        call_entry = self.symbol_table.lookup(self.id_)
+        try:
+            call_entry = self.symbol_table.lookup(self.id_)
+        except PCLSymbolTableError:
+            call_entry = self.symbol_table.lookup('forward_' + self.id_)
+        except:
+            raise PCLSemError('Name not found')
+
         formals = self.symbol_table.formal_generator(self.id_)
         self.stype = call_entry.stype
 
@@ -624,13 +684,16 @@ class Call(Statement):
         # WIP
         real_params = []
 
-        call_entry_cvalue = self.symbol_table.lookup(self.id_).cvalue
+        try:
+            call_entry_cvalue = self.symbol_table.lookup(self.id_).cvalue
+        except PCLSymbolTableError:
+            call_entry_cvalue = self.symbol_table.lookup('forward_' + self.id_).cvalue
+        except:
+            raise PCLCodegenError()
 
         formals = self.symbol_table.formal_generator(self.id_)
         for expr, (formal_name, formal) in zip(self.exprs, formals):
             expr.codegen()
-
-            # TODO handle var array
 
             if formal.by_reference:
                 # import pdb; pdb.set_trace()
@@ -640,7 +703,6 @@ class Call(Statement):
                 else:
                     raise NotImplementedError()
             else:
-
                 if isinstance(expr, StringLiteral):
                     ptr = expr.gep
                     real_params.append(ptr)
@@ -1354,6 +1416,8 @@ class SetExpression(LValue):
         elif self.lvalue.stype[0] == ComposerType.T_VAR_ARRAY and self.expr.stype[0] == ComposerType.T_CONST_ARRAY:
             return
         elif self.expr.stype[1] == BaseType.T_NIL:
+            return
+        elif self.expr.stype == (ComposerType.T_CONST_ARRAY, (ComposerType.T_NO_COMP, BaseType.T_CHAR)):
             return
         else:
             raise PCLSemError(

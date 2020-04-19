@@ -51,6 +51,8 @@ class PCLCDriver:
         self.program = program
         self.lexer = PCLLexer()
         self.parser = PCLParser()
+        self.parsed = None
+        self.tokens = None
 
     def lex(self):
         self.tokens = self.lexer.tokenize(self.program)
@@ -59,7 +61,11 @@ class PCLCDriver:
         self.parsed = self.parser.parse(self.tokens)
 
     def pprint(self):
-        self.parsed.pprint()
+        if self.parsed:
+            self.parsed.pprint()
+        else:
+            for token in self.tokens:
+                print(token)
 
     def sem(self):
         self.parsed.sem()

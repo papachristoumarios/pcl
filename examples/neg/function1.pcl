@@ -1,5 +1,5 @@
 program function1;
 
 begin
-  foo(1, 2, 3);
+  Sfoo(1, 2, 3);
 end.

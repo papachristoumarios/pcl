@@ -1,6 +1,5 @@
 program collatz;
 
-forward procedure hello();
 var x : integer;
 
 begin
