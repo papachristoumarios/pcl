@@ -14,8 +14,10 @@ class LLVMTypeSize:
 class LLVMTypes:
     T_INT = ir.IntType(8 * LLVMTypeSize.T_INT)
 
-    # Bool is i1 here (there is no need to be i8)
-    # Moreover it is a waste of time to use trunc and zext
+    # Memory is byte-addressable so i1 corresponds
+    # to 1 byte of space in memory and not 1 bit.
+    # The i1 signature is left on purpose to deal
+    # with conditional branches.
     T_BOOL = ir.IntType(1)
 
     T_CHAR = ir.IntType(8 * LLVMTypeSize.T_CHAR)
