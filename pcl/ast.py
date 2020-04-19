@@ -43,7 +43,7 @@ class AST(ABC):
         pass
 
     def raise_exception_helper(self, msg, exception=PCLSemError):
-        msg = 'Line {}: {}'.format(self.lineno, msg)
+        msg = '{} at line {}: {}'.format(self.__class__.__name__, self.lineno, msg)
         raise exception(msg)
 
     def sem(self):
@@ -88,7 +88,7 @@ class AST(ABC):
 
         msg = '{}: Expected type {}, got type {}. {}'.format(
             self.__class__.__name__, target, self.stype, ' '.join(args))
-        raise PCLSemError(msg)
+        self.raise_exception_helper(msg, PCLSemError)
 
     def print_module(self):
         print(str(self.module))
@@ -120,8 +120,8 @@ class AST(ABC):
 
 
 class Program(AST):
-    def __init__(self, id_, body, builder, module, symbol_table):
-        super(Program, self).__init__(builder, module, symbol_table)
+    def __init__(self, id_, body, builder, module, symbol_table, lineno):
+        super(Program, self).__init__(builder, module, symbol_table, lineno)
         self.id_ = id_
         self.body = body
 
@@ -148,8 +148,8 @@ class Program(AST):
 
 class Body(AST):
 
-    def __init__(self, locals_, block, builder, module, symbol_table):
-        super(Body, self).__init__(builder, module, symbol_table)
+    def __init__(self, locals_, block, builder, module, symbol_table, lineno):
+        super(Body, self).__init__(builder, module, symbol_table, lineno)
         self.locals_ = locals_
         self.block = block
 
@@ -170,13 +170,13 @@ class Body(AST):
 
 
 class Local(AST):
-    def __init__(self, builder, module, symbol_table):
-        super(Local, self).__init__(builder, module, symbol_table)
+    def __init__(self, builder, module, symbol_table, lineno):
+        super(Local, self).__init__(builder, module, symbol_table, lineno)
 
 
 class LocalHeader(Local):
-    def __init__(self, header, body, builder, module, symbol_table):
-        super(LocalHeader, self).__init__(builder, module, symbol_table)
+    def __init__(self, header, body, builder, module, symbol_table, lineno):
+        super(LocalHeader, self).__init__(builder, module, symbol_table, lineno)
         self.header = header
         self.body = body
 
@@ -344,8 +344,8 @@ class LocalHeader(Local):
 
 class VarList(Local):
 
-    def __init__(self, vars_, builder, module, symbol_table):
-        super(VarList, self).__init__(builder, module, symbol_table)
+    def __init__(self, vars_, builder, module, symbol_table, lineno):
+        super(VarList, self).__init__(builder, module, symbol_table, lineno)
         self.vars_ = vars_
 
     def sem(self):
@@ -358,8 +358,8 @@ class VarList(Local):
 
 
 class Var(Local):
-    def __init__(self, ids, type_, builder, module, symbol_table):
-        super(Var, self).__init__(builder, module, symbol_table)
+    def __init__(self, ids, type_, builder, module, symbol_table, lineno):
+        super(Var, self).__init__(builder, module, symbol_table, lineno)
         self.ids = ids
         self.type_ = type_
 
@@ -385,8 +385,8 @@ class Var(Local):
 
 
 class Label(Local):
-    def __init__(self, ids, builder, module, symbol_table):
-        super(Label, self).__init__(builder, module, symbol_table)
+    def __init__(self, ids, builder, module, symbol_table, lineno):
+        super(Label, self).__init__(builder, module, symbol_table, lineno)
         self.ids = ids
 
     def sem(self):
@@ -405,8 +405,8 @@ class Label(Local):
 
 class Forward(Local):
 
-    def __init__(self, header, builder, module, symbol_table):
-        super(Forward, self).__init__(builder, module, symbol_table)
+    def __init__(self, header, builder, module, symbol_table, lineno):
+        super(Forward, self).__init__(builder, module, symbol_table, lineno)
         self.header = header
 
     def sem(self):
@@ -485,13 +485,14 @@ class Header(AST):
             func_type,
             builder,
             module,
-            symbol_table):
+            symbol_table,
+            lineno):
         '''
             header_type: [function, procedure]
             formals: function / procedure inputs
             func_type: return type
         '''
-        super(Header, self).__init__(builder, module, symbol_table)
+        super(Header, self).__init__(builder, module, symbol_table, lineno)
         self.header_type = header_type
         self.id_ = id_
         self.formals = formals
@@ -523,8 +524,9 @@ class Formal(AST):
             by_reference,
             builder,
             module,
-            symbol_table):
-        super(Formal, self).__init__(builder, module, symbol_table)
+            symbol_table,
+            lineno):
+        super(Formal, self).__init__(builder, module, symbol_table, lineno)
         self.ids = ids
         self.type_ = type_
         self.by_reference = by_reference
@@ -533,15 +535,15 @@ class Formal(AST):
         self.type_.sem()
         if self.type_.stype[0] in [ComposerType.T_CONST_ARRAY, ComposerType.T_VAR_ARRAY] and self.by_reference:
             msg = 'Arrays are not allowed to pass by value'
-            raise PCLSemError(msg)
+            self.raise_exception_helper(msg, PCLSemError)
 
         self.stype = self.type_.stype
 
 
 class Type(AST):
 
-    def __init__(self, type_, builder, module, symbol_table):
-        super(Type, self).__init__(builder, module, symbol_table)
+    def __init__(self, type_, builder, module, symbol_table, lineno):
+        super(Type, self).__init__(builder, module, symbol_table, lineno)
         self.type_ = type_
 
     def sem(self):
@@ -557,8 +559,8 @@ class PointerType(Type):
         Example: ^integer
     '''
 
-    def __init__(self, type_, builder, module, symbol_table):
-        super(PointerType, self).__init__(type_, builder, module, symbol_table)
+    def __init__(self, type_, builder, module, symbol_table, lineno):
+        super(PointerType, self).__init__(type_, builder, module, symbol_table, lineno)
         self.type_ = type_
 
     def sem(self):
@@ -573,8 +575,8 @@ class PointerType(Type):
 
 class ArrayType(Type):
 
-    def __init__(self, length, type_, builder, module, symbol_table):
-        super(ArrayType, self).__init__(type_, builder, module, symbol_table)
+    def __init__(self, length, type_, builder, module, symbol_table, lineno):
+        super(ArrayType, self).__init__(type_, builder, module, symbol_table, lineno)
         self.length = int(length)
 
     def sem(self):
@@ -584,7 +586,8 @@ class ArrayType(Type):
         elif self.length == -1:
             self.stype = (ComposerType.T_VAR_ARRAY, self.type_.stype)
         else:
-            raise PCLSemError('Negative length')
+            msg = 'Negative length specified'
+            self.raise_exception_helper(msg, PCLSemError)
 
     def codegen(self):
         self.type_.codegen()
@@ -596,8 +599,8 @@ class ArrayType(Type):
 
 class Statement(AST):
 
-    def __init__(self, builder, module, symbol_table, **kwargs):
-        super(Statement, self).__init__(builder, module, symbol_table)
+    def __init__(self, builder, module, symbol_table, lineno, **kwargs):
+        super(Statement, self).__init__(builder, module, symbol_table, lineno)
         self.name = kwargs.get('name', None)
         self.stmt = kwargs.get('stmt', None)
 
@@ -628,8 +631,8 @@ class Statement(AST):
 
 class Block(Statement):
 
-    def __init__(self, stmt_list, builder, module, symbol_table):
-        super(Block, self).__init__(builder, module, symbol_table)
+    def __init__(self, stmt_list, builder, module, symbol_table, lineno):
+        super(Block, self).__init__(builder, module, symbol_table, lineno)
         self.stmt_list = stmt_list
 
     def sem(self):
@@ -644,8 +647,8 @@ class Block(Statement):
 
 
 class Call(Statement):
-    def __init__(self, id_, exprs, builder, module, symbol_table):
-        super(Call, self).__init__(builder, module, symbol_table)
+    def __init__(self, id_, exprs, builder, module, symbol_table, lineno):
+        super(Call, self).__init__(builder, module, symbol_table, lineno)
         self.id_ = id_
         self.exprs = exprs
 
@@ -660,7 +663,8 @@ class Call(Statement):
         except PCLSymbolTableError:
             call_entry = self.symbol_table.lookup('forward_' + self.id_)
         except:
-            raise PCLSemError('Name not found')
+            msg = 'Name {} not found'.format(self.id_)
+            self.raise_exception_helper(msg, PCLSemError)
 
         formals = self.symbol_table.formal_generator(self.id_)
         self.stype = call_entry.stype
@@ -678,7 +682,8 @@ class Call(Statement):
                 elif formal.stype[0] == ComposerType.T_VAR_ARRAY and expr.stype[0] == ComposerType.T_CONST_ARRAY:
                     continue
                 else:
-                    raise e
+                    msg = 'Incompatible assignment type: {}'.format(formal_name)
+                    self.raise_exception_helper(msg, PCLSemError)
 
     def codegen(self):
         # WIP
@@ -689,7 +694,9 @@ class Call(Statement):
         except PCLSymbolTableError:
             call_entry_cvalue = self.symbol_table.lookup('forward_' + self.id_).cvalue
         except:
-            raise PCLCodegenError()
+            # Should never be reached
+            msg = 'Unknown name: {}'.format(self.id_)
+            self.raise_exception_helper(msg, PCLSemError)
 
         formals = self.symbol_table.formal_generator(self.id_)
         for expr, (formal_name, formal) in zip(self.exprs, formals):
@@ -717,8 +724,8 @@ class If(Statement):
         If statement.
     '''
 
-    def __init__(self, expr, stmt, else_stmt, builder, module, symbol_table):
-        super(If, self).__init__(builder, module, symbol_table)
+    def __init__(self, expr, stmt, else_stmt, builder, module, symbol_table, lineno):
+        super(If, self).__init__(builder, module, symbol_table, lineno)
         self.expr = expr
         self.stmt = stmt
         self.else_stmt = else_stmt
@@ -750,8 +757,8 @@ class While(Statement):
         While statement.
     '''
 
-    def __init__(self, expr, stmt, builder, module, symbol_table):
-        super(While, self).__init__(builder, module, symbol_table)
+    def __init__(self, expr, stmt, builder, module, symbol_table, lineno):
+        super(While, self).__init__(builder, module, symbol_table, lineno)
         self.expr = expr
         self.stmt = stmt
 
@@ -777,8 +784,8 @@ class Goto(Statement):
         Goto statement.
     '''
 
-    def __init__(self, id_, builder, module, symbol_table):
-        super(Goto, self).__init__(builder, module, symbol_table)
+    def __init__(self, id_, builder, module, symbol_table, lineno):
+        super(Goto, self).__init__(builder, module, symbol_table, lineno)
         self.id_ = id_
 
     def sem(self):
@@ -802,8 +809,10 @@ class Return(Statement):
     def sem(self):
         try:
             result_entry = self.symbol_table.lookup('result')
+            # TODO Is this needed?
             if result_entry.num_queries == 1:
-                raise PCLSemError('Result must be set once')
+                msg = 'Result must be set once'
+                self.raise_exception_helper(msg, PCLSemError)
         except PCLSymbolTableError:
             pass
 
@@ -840,8 +849,8 @@ class New(Statement):
         New Statement.
     '''
 
-    def __init__(self, expr, lvalue, builder, module, symbol_table):
-        super(New, self).__init__(builder, module, symbol_table)
+    def __init__(self, expr, lvalue, builder, module, symbol_table, lineno):
+        super(New, self).__init__(builder, module, symbol_table, lineno)
         self.expr = expr
         self.lvalue = lvalue
 
@@ -849,9 +858,8 @@ class New(Statement):
         self.lvalue.sem()
         if self.expr:
             if self.lvalue.stype[0] != ComposerType.T_PTR or self.lvalue.stype[1][0] != ComposerType.T_VAR_ARRAY:
-                raise PCLSemError(
-                    'Cannot create new instance of {}'.format(
-                        self.lvalue.stype))
+                msg = 'Cannot create new instance of {}'.format(self.lvalue.stype)
+                self.raise_exception_helper(msg, PCLSemError)
 
             self.expr.sem()
             self.expr.type_check((ComposerType.T_NO_COMP, BaseType.T_INT))
@@ -864,9 +872,8 @@ class New(Statement):
         else:
             if self.lvalue.stype[0] != ComposerType.T_PTR or not is_composite(
                     self.lvalue.stype[1]):
-                raise PCLSemError(
-                    'Cannot create new instance of {}'.format(
-                        self.lvalue.stype))
+                msg = 'Cannot create new instance of {}'.format(self.lvalue.stype)
+                self.raise_exception_helper(msg, PCLSemError)
 
             # ^t -> t
             self.stype = self.lvalue.stype[1]
@@ -890,8 +897,8 @@ class Dispose(Statement):
         Dispose statement.
     '''
 
-    def __init__(self, lvalue, brackets, builder, module, symbol_table):
-        super(Dispose, self).__init__(builder, module, symbol_table)
+    def __init__(self, lvalue, brackets, builder, module, symbol_table, lineno):
+        super(Dispose, self).__init__(builder, module, symbol_table, lineno)
         self.lvalue = lvalue
         self.brackets = brackets
 
@@ -900,15 +907,13 @@ class Dispose(Statement):
 
         if self.brackets:
             if self.lvalue.stype[0] != ComposerType.T_PTR or self.lvalue.stype[1][0] != ComposerType.T_VAR_ARRAY:
-                raise PCLSemError(
-                    'Cannot dispose instance of {}'.format(
-                        self.lvalue.stype))
+                msg = 'Cannot dispose instance of {}'.format(self.lvalue.stype)
+                self.raise_exception_helper(msg, PCLSemError)
         else:
             if self.lvalue.stype[0] != ComposerType.T_PTR or not is_composite(
                     self.lvalue.stype[1]):
-                raise PCLSemError(
-                    'Cannot dispose instance of {}'.format(
-                        self.lvalue.stype))
+                msg = 'Cannot dispose instance of {}'.format(self.lvalue.stype)
+                self.raise_exception_helper(msg, PCLSemError)
 
         self.stype = (ComposerType.T_NO_COMP, BaseType.T_NIL)
 
@@ -928,8 +933,8 @@ class RValue(Expr):
         Base class for the RValue.
     '''
 
-    def __init__(self, builder, module, symbol_table):
-        super(RValue, self).__init__(builder, module, symbol_table)
+    def __init__(self, builder, module, symbol_table, lineno):
+        super(RValue, self).__init__(builder, module, symbol_table, lineno)
 
     def type_check(self, target, *args):
         if isinstance(target, list):
@@ -948,8 +953,8 @@ class IntegerConst(RValue):
         Integer constant. Holds integer numbers.
     '''
 
-    def __init__(self, value, builder, module, symbol_table):
-        super(IntegerConst, self).__init__(builder, module, symbol_table)
+    def __init__(self, value, builder, module, symbol_table, lineno):
+        super(IntegerConst, self).__init__(builder, module, symbol_table, lineno)
         self.value = int(value)
 
     def sem(self):
@@ -964,8 +969,8 @@ class RealConst(RValue):
         Real constant. Holds floating point numbers.
     '''
 
-    def __init__(self, value, builder, module, symbol_table):
-        super(RealConst, self).__init__(builder, module, symbol_table)
+    def __init__(self, value, builder, module, symbol_table, lineno):
+        super(RealConst, self).__init__(builder, module, symbol_table, lineno)
         self.value = float(value)
 
     def sem(self):
@@ -980,8 +985,8 @@ class CharConst(RValue):
         Character constant. Contains exactly one literal.
     '''
 
-    def __init__(self, value, builder, module, symbol_table):
-        super(CharConst, self).__init__(builder, module, symbol_table)
+    def __init__(self, value, builder, module, symbol_table, lineno):
+        super(CharConst, self).__init__(builder, module, symbol_table, lineno)
         self.value = ord(value)
 
     def sem(self):
@@ -996,8 +1001,8 @@ class BoolConst(RValue):
         Boolean constant. Can be true or false.
     '''
 
-    def __init__(self, value, builder, module, symbol_table):
-        super(BoolConst, self).__init__(builder, module, symbol_table)
+    def __init__(self, value, builder, module, symbol_table, lineno):
+        super(BoolConst, self).__init__(builder, module, symbol_table, lineno)
         self.value = int(value == 'true')
 
     def sem(self):
@@ -1013,8 +1018,8 @@ class Ref(RValue):
         t is integer then ^t is a pointer to an integer
     '''
 
-    def __init__(self, lvalue, builder, module, symbol_table):
-        super(Ref, self).__init__(builder, module, symbol_table)
+    def __init__(self, lvalue, builder, module, symbol_table, lineno):
+        super(Ref, self).__init__(builder, module, symbol_table, lineno)
         self.lvalue = lvalue
 
     def sem(self):
@@ -1027,8 +1032,8 @@ class Nil(RValue):
         The null pointer. Must be declared as a singleton.
     '''
 
-    def __init__(self, builder, module, symbol_table):
-        super(Nil, self).__init__(builder, module, symbol_table)
+    def __init__(self, builder, module, symbol_table, lineno):
+        super(Nil, self).__init__(builder, module, symbol_table, lineno)
 
     def sem(self):
         self.stype = (ComposerType.T_NO_COMP, BaseType.T_NIL)
@@ -1041,8 +1046,8 @@ class ArUnOp(RValue):
         Unary operator. +x, -x
     '''
 
-    def __init__(self, op, rhs, builder, module, symbol_table):
-        super(ArUnOp, self).__init__(builder, module, symbol_table)
+    def __init__(self, op, rhs, builder, module, symbol_table, lineno):
+        super(ArUnOp, self).__init__(builder, module, symbol_table, lineno)
         self.op = op
         self.rhs = rhs
 
@@ -1069,8 +1074,8 @@ class LogicUnOp(RValue):
         Unary operator. +x, -x
     '''
 
-    def __init__(self, op, rhs, builder, module, symbol_table):
-        super(LogicUnOp, self).__init__(builder, module, symbol_table)
+    def __init__(self, op, rhs, builder, module, symbol_table, lineno):
+        super(LogicUnOp, self).__init__(builder, module, symbol_table, lineno)
         self.op = op
         self.rhs = rhs
 
@@ -1089,8 +1094,8 @@ class ArOp(RValue):
         Arithmetic operation between two sides (lhs, rhs)
     '''
 
-    def __init__(self, op, lhs, rhs, builder, module, symbol_table):
-        super(ArOp, self).__init__(builder, module, symbol_table)
+    def __init__(self, op, lhs, rhs, builder, module, symbol_table, lineno):
+        super(ArOp, self).__init__(builder, module, symbol_table, lineno)
         self.op = op
         self.lhs = lhs
         self.rhs = rhs
@@ -1162,8 +1167,8 @@ class CompOp(RValue):
         Comparison operation between two sides (lhs, rhs)
     '''
 
-    def __init__(self, op, lhs, rhs, builder, module, symbol_table):
-        super(CompOp, self).__init__(builder, module, symbol_table)
+    def __init__(self, op, lhs, rhs, builder, module, symbol_table, lineno):
+        super(CompOp, self).__init__(builder, module, symbol_table, lineno)
         self.op = op
         self.lhs = lhs
         self.rhs = rhs
@@ -1231,8 +1236,8 @@ class LogicOp(RValue):
         Logic operation between two sides (lhs, rhs)
     '''
 
-    def __init__(self, op, lhs, rhs, builder, module, symbol_table):
-        super(LogicOp, self).__init__(builder, module, symbol_table)
+    def __init__(self, op, lhs, rhs, builder, module, symbol_table, lineno):
+        super(LogicOp, self).__init__(builder, module, symbol_table, lineno)
         self.op = op
         self.lhs = lhs
         self.rhs = rhs
@@ -1263,10 +1268,11 @@ class AddressOf(RValue):
         with r-value = @l-value
     '''
 
-    def __init__(self, lvalue, builder, module, symbol_table):
+    def __init__(self, lvalue, builder, module, symbol_table, lineno):
         if isinstance(lvalue, RValue):
-            raise PCLParserError('Tried to access the address of an RValue')
-        super(AddressOf, self).__init__(builder, module, symbol_table)
+            msg = 'Tried to access the address of an RValue'
+            self.raise_exception_helper(msg, PCLParserError)
+        super(AddressOf, self).__init__(builder, module, symbol_table, lineno)
         self.lvalue = lvalue
 
     def sem(self):
@@ -1282,8 +1288,8 @@ class LValue(Expr):
         Base class for the LValue
     '''
 
-    def __init__(self, builder, module, symbol_table):
-        super(LValue, self).__init__(builder, module, symbol_table)
+    def __init__(self, builder, module, symbol_table, lineno):
+        super(LValue, self).__init__(builder, module, symbol_table, lineno)
         self.load = False
         self.gep = None
 
@@ -1293,8 +1299,8 @@ class NameLValue(LValue):
         Named LValue: variable name (i.e. x)
     '''
 
-    def __init__(self, id_, builder, module, symbol_table):
-        super(NameLValue, self).__init__(builder, module, symbol_table)
+    def __init__(self, id_, builder, module, symbol_table, lineno):
+        super(NameLValue, self).__init__(builder, module, symbol_table, lineno)
         self.id_ = id_
 
     def sem(self):
@@ -1327,8 +1333,8 @@ class Result(NameLValue):
         Holds the result of a function
     '''
 
-    def __init__(self, builder, module, symbol_table):
-        super(Result, self).__init__('result', builder, module, symbol_table)
+    def __init__(self, builder, module, symbol_table, lineno):
+        super(Result, self).__init__('result', builder, module, symbol_table, lineno)
 
     def sem(self):
        result = self.symbol_table.lookup('result')
@@ -1345,8 +1351,8 @@ class StringLiteral(LValue):
         Holds a node for a string literal
     '''
 
-    def __init__(self, literal, builder, module, symbol_table):
-        super(StringLiteral, self).__init__(builder, module, symbol_table)
+    def __init__(self, literal, builder, module, symbol_table, lineno):
+        super(StringLiteral, self).__init__(builder, module, symbol_table, lineno)
         self.literal = literal + '\0'
         self.length = len(self.literal)
 
@@ -1372,19 +1378,22 @@ class Deref(LValue):
         If e = t^ then ^e = t
     '''
 
-    def __init__(self, expr, builder, module, symbol_table):
+    def __init__(self, expr, builder, module, symbol_table, lineno):
+        super(Deref, self).__init__(builder, module, symbol_table, lineno)
         if isinstance(expr, Nil):
-            raise PCLSemError('Cannot dereference nil')
+            msg = 'Cannot dereference nil'
+            self.raise_exception_helper(msg, PCLSemError)
 
-        super(Deref, self).__init__(builder, module, symbol_table)
         self.expr = expr
 
     def sem(self):
         self.expr.sem()
         if self.expr.stype[0] != ComposerType.T_PTR:
-            raise PCLSemError('Dereferencing non-pointer expression')
+            msg = 'Dereferencing non-pointer expression'
+            self.raise_exception_helper(msg, PCLSemError)
         elif self.expr.stype[1] == BaseType.T_NIL:
-            raise PCLSemError('Cannot dereference nil')
+            msg = 'Cannot dereference nil'
+            self.raise_exception_helper(msg, PCLSemError)
 
         self.stype = self.expr.stype[1]
 
@@ -1399,8 +1408,8 @@ class SetExpression(LValue):
         Assignment of an expression to a name
     '''
 
-    def __init__(self, lvalue, expr, builder, module, symbol_table):
-        super(SetExpression, self).__init__(builder, module, symbol_table)
+    def __init__(self, lvalue, expr, builder, module, symbol_table, lineno):
+        super(SetExpression, self).__init__(builder, module, symbol_table, lineno)
         self.lvalue = lvalue
         self.expr = expr
 
@@ -1420,9 +1429,8 @@ class SetExpression(LValue):
         elif self.expr.stype == (ComposerType.T_CONST_ARRAY, (ComposerType.T_NO_COMP, BaseType.T_CHAR)):
             return
         else:
-            raise PCLSemError(
-                'Invalid set expression {} := {}'.format(
-                    self.lvalue.stype, self.expr.stype))
+            msg = 'Invalid set expression {} := {}'.format(self.lvalue.stype, self.expr.stype)
+            self.raise_exception_helper(msg, PCLSemError)
 
     def codegen(self):
         self.expr.codegen()
@@ -1439,8 +1447,8 @@ class LBrack(LValue):
         ArrayElement
     '''
 
-    def __init__(self, lvalue, expr, builder, module, symbol_table):
-        super(LBrack, self).__init__(builder, module, symbol_table)
+    def __init__(self, lvalue, expr, builder, module, symbol_table, lineno):
+        super(LBrack, self).__init__(builder, module, symbol_table, lineno)
         self.lvalue = lvalue
         self.expr = expr
 

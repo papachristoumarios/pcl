@@ -35,7 +35,7 @@ class PCLParser(Parser):
         self.the_nil = Nil(
             builder=self.builder,
             module=self.module,
-            symbol_table=self.symbol_table)
+            symbol_table=self.symbol_table, lineno=-1)
 
     # Tokens from PCLLexer
     tokens = PCLLexer.tokens
@@ -54,6 +54,12 @@ class PCLParser(Parser):
         ('nonassoc', 'ELSE'),
     )
 
+    def get_lineno(self, p):
+        try:
+            return p.lineno
+        except:
+            return -1
+
     @_('PROGRAM NAME SEMICOLON body COLON')
     def program(self, p):
         return Program(
@@ -61,7 +67,7 @@ class PCLParser(Parser):
             body=p.body,
             builder=self.builder,
             module=self.module,
-            symbol_table=self.symbol_table)
+            symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
     @_('local_list block')
     def body(self, p):
@@ -70,27 +76,27 @@ class PCLParser(Parser):
             block=p.block,
             builder=self.builder,
             module=self.module,
-            symbol_table=self.symbol_table)
+            symbol_table=self.symbol_table, lineno=-1)
 
     @_('VAR var_list')
     def local(self, p):
         return VarList(vars_=p.var_list, builder=self.builder,
-                       module=self.module, symbol_table=self.symbol_table)
+                       module=self.module, symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
     @_('LABEL id_list SEMICOLON')
     def local(self, p):
         return Label(ids=p.id_list, builder=self.builder, module=self.module,
-                     symbol_table=self.symbol_table)
+                     symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
     @_('header SEMICOLON body SEMICOLON')
     def local(self, p):
         return LocalHeader(header=p.header, body=p.body, builder=self.builder,
-                           module=self.module, symbol_table=self.symbol_table)
+                           module=self.module, symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
     @_('FORWARD header SEMICOLON')
     def local(self, p):
         return Forward(header=p.header, builder=self.builder,
-                       module=self.module, symbol_table=self.symbol_table)
+                       module=self.module, symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
     @_('local_list local')
     def local_list(self, p):
@@ -104,7 +110,7 @@ class PCLParser(Parser):
     @_('id_list DCOLON vartype SEMICOLON')
     def var(self, p):
         return Var(ids=p.id_list, type_=p.vartype, builder=self.builder,
-                   module=self.module, symbol_table=self.symbol_table)
+                   module=self.module, symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
     @_('NAME comma_id_list')
     def id_list(self, p):
@@ -133,26 +139,26 @@ class PCLParser(Parser):
     def header(self, p):
         return Header(header_type=p[0], id_=p.NAME, formals=p.formal_list,
                       func_type=None, builder=self.builder, module=self.module,
-                      symbol_table=self.symbol_table)
+                      symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
     @_('PROCEDURE NAME LPAREN RPAREN')
     def header(self, p):
         return Header(header_type=p[0], id_=p.NAME, formals=deque([]),
                       func_type=None, builder=self.builder, module=self.module,
-                      symbol_table=self.symbol_table)
+                      symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
     @_('FUNCTION NAME LPAREN formal_list RPAREN DCOLON vartype')
     def header(self, p):
         return Header(header_type=p[0], id_=p.NAME,
                       formals=p.formal_list, func_type=p.vartype,
                       builder=self.builder, module=self.module,
-                      symbol_table=self.symbol_table)
+                      symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
     @_('FUNCTION NAME LPAREN RPAREN DCOLON vartype')
     def header(self, p):
         return Header(header_type=p[0], id_=p.NAME, formals=deque([]),
                       func_type=p.vartype, builder=self.builder,
-                      module=self.module, symbol_table=self.symbol_table)
+                      module=self.module, symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
     @_('VAR id_list DCOLON vartype')
     def formal(self, p):
@@ -162,7 +168,7 @@ class PCLParser(Parser):
             by_reference=True,
             builder=self.builder,
             module=self.module,
-            symbol_table=self.symbol_table)
+            symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
     @_('id_list DCOLON vartype')
     def formal(self, p):
@@ -172,7 +178,7 @@ class PCLParser(Parser):
             by_reference=False,
             builder=self.builder,
             module=self.module,
-            symbol_table=self.symbol_table)
+            symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
     @_('formal semicolon_formal_list')
     def formal_list(self, p):
@@ -192,28 +198,28 @@ class PCLParser(Parser):
     @_('INTEGER', 'REAL', 'BOOLEAN', 'CHAR')
     def vartype(self, p):
         return Type(type_=p[0], builder=self.builder, module=self.module,
-                    symbol_table=self.symbol_table)
+                    symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
     @_('ARRAY LSQUARE INT_CONS RSQUARE OF vartype')
     def vartype(self, p):
         return ArrayType(length=p[2], type_=p.vartype, builder=self.builder,
-                         module=self.module, symbol_table=self.symbol_table)
+                         module=self.module, symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
     @_('ARRAY OF vartype')
     def vartype(self, p):
         return ArrayType(length=-1, type_=p.vartype, builder=self.builder,
-                         module=self.module, symbol_table=self.symbol_table)
+                         module=self.module, symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
     @_('EXP vartype')
     def vartype(self, p):
         return PointerType(type_=p.vartype, builder=self.builder,
-                           module=self.module, symbol_table=self.symbol_table)
+                           module=self.module, symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
     @_('BEGIN stmt semicolon_stmt_list END')
     def block(self, p):
         p.semicolon_stmt_list.appendleft(p.stmt)
         return Block(stmt_list=p.semicolon_stmt_list, builder=self.builder,
-                     module=self.module, symbol_table=self.symbol_table)
+                     module=self.module, symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
     @_('')
     def semicolon_stmt_list(self, p):
@@ -227,10 +233,11 @@ class PCLParser(Parser):
     # STATEMENT
     @_('')
     def stmt(self, p):
+        # Initialize lineno later
         return Empty(
             builder=self.builder,
             module=self.module,
-            symbol_table=self.symbol_table)
+            symbol_table=self.symbol_table, lineno=-1)
 
     @_('block')
     def stmt(self, p):
@@ -243,52 +250,52 @@ class PCLParser(Parser):
             expr=p.expr,
             builder=self.builder,
             module=self.module,
-            symbol_table=self.symbol_table)
+            symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
     @_('NEW lvalue')
     def stmt(self, p):
         return New(expr=None, lvalue=p.lvalue, builder=self.builder,
-                   module=self.module, symbol_table=self.symbol_table)
+                   module=self.module, symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
     @_('NEW LSQUARE expr RSQUARE lvalue')
     def stmt(self, p):
         p.lvalue.load = True
         return New(expr=p.expr, lvalue=p.lvalue, builder=self.builder,
-                   module=self.module, symbol_table=self.symbol_table)
+                   module=self.module, symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
     @_('DISPOSE lvalue')
     def stmt(self, p):
         return Dispose(lvalue=p.lvalue, brackets=False, builder=self.builder,
-                       module=self.module, symbol_table=self.symbol_table)
+                       module=self.module, symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
     @_('DISPOSE LSQUARE RSQUARE lvalue')
     def stmt(self, p):
         return Dispose(lvalue=p.lvalue, brackets=True, builder=self.builder,
-                       module=self.module, symbol_table=self.symbol_table)
+                       module=self.module, symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
     @_('RETURN')
     def stmt(self, p):
         return Return(
             builder=self.builder,
             module=self.module,
-            symbol_table=self.symbol_table)
+            symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
     @_('GOTO NAME')
     def stmt(self, p):
         return Goto(id_=p.NAME, builder=self.builder, module=self.module,
-                    symbol_table=self.symbol_table)
+                    symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
     @_('WHILE expr DO stmt')
     def stmt(self, p):
         return While(expr=p.expr, stmt=p.stmt, builder=self.builder,
-                     module=self.module, symbol_table=self.symbol_table)
+                     module=self.module, symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
     @_('IF expr THEN stmt else_stmt')
     def stmt(self, p):
         # import pdb; pdb.set_trace()
         return If(expr=p.expr, stmt=p[3], else_stmt=p.else_stmt,
                   builder=self.builder, module=self.module,
-                  symbol_table=self.symbol_table)
+                  symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
     @_('ELSE stmt')
     def else_stmt(self, p):
@@ -305,7 +312,7 @@ class PCLParser(Parser):
             stmt=p.stmt,
             builder=self.builder,
             module=self.module,
-            symbol_table=self.symbol_table)
+            symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
     @_('call')
     def stmt(self, p):
@@ -325,7 +332,7 @@ class PCLParser(Parser):
     @_('NAME')
     def lvalue(self, p):
         return NameLValue(id_=p.NAME, builder=self.builder, module=self.module,
-                          symbol_table=self.symbol_table)
+                          symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
     @_('STRING')
     def lvalue(self, p):
@@ -333,18 +340,18 @@ class PCLParser(Parser):
             literal=p[0][1:-1],
             builder=self.builder,
             module=self.module,
-            symbol_table=self.symbol_table)
+            symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
     @_('lvalue LSQUARE expr RSQUARE %prec BRACKETS')
     def lvalue(self, p):
         return LBrack(lvalue=p.lvalue, expr=p.expr, module=self.module,
                       builder=self.builder,
-                      symbol_table=self.symbol_table)
+                      symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
     @_('expr EXP')
     def lvalue(self, p):
         return Deref(expr=p.expr, builder=self.builder, module=self.module,
-                     symbol_table=self.symbol_table)
+                     symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
     @_('LPAREN lvalue RPAREN')
     def lvalue(self, p):
@@ -353,7 +360,7 @@ class PCLParser(Parser):
     @_('RESULT')
     def lvalue(self, p):
         return Result(builder=self.builder, module=self.module,
-                      symbol_table=self.symbol_table)
+                      symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
     # RVALUE
     @_('INT_CONS')
@@ -362,24 +369,24 @@ class PCLParser(Parser):
             value=p[0],
             builder=self.builder,
             module=self.module,
-            symbol_table=self.symbol_table)
+            symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
     @_('TRUE', 'FALSE')
     def rvalue(self, p):
         return BoolConst(value=p[0], builder=self.builder, module=self.module,
-                         symbol_table=self.symbol_table)
+                         symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
     @_('REAL_CONS')
     def rvalue(self, p):
         return RealConst(value=p[0], builder=self.builder, module=self.module,
-                         symbol_table=self.symbol_table)
+                         symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
     @_('CHARACTER')
     def rvalue(self, p):
         return CharConst(value=p[0][1:-1],
                          builder=self.builder,
                          module=self.module,
-                         symbol_table=self.symbol_table)
+                         symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
     @_('LPAREN rvalue RPAREN')
     def rvalue(self, p):
@@ -389,7 +396,7 @@ class PCLParser(Parser):
     def rvalue(self, p):
         # TODO address of must impose lvalue!!!
         return AddressOf(lvalue=p[1], builder=self.builder, module=self.module,
-                         symbol_table=self.symbol_table)
+                         symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
     @_('NIL')
     def rvalue(self, p):
@@ -404,14 +411,14 @@ class PCLParser(Parser):
                 rhs=p.expr,
                 builder=self.builder,
                 module=self.module,
-                symbol_table=self.symbol_table)
+                symbol_table=self.symbol_table, lineno=self.get_lineno(p))
         else:
             return LogicUnOp(
                 op=p.unop,
                 rhs=p.expr,
                 builder=self.builder,
                 module=self.module,
-                symbol_table=self.symbol_table)
+                symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
     @_('expr PLUS expr',
        'expr MINUS expr',
@@ -436,7 +443,7 @@ class PCLParser(Parser):
                 rhs=p[-1],
                 builder=self.builder,
                 module=self.module,
-                symbol_table=self.symbol_table)
+                symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
         if p[1] in self.logical:
             return LogicOp(
@@ -445,7 +452,7 @@ class PCLParser(Parser):
                 rhs=p[-1],
                 builder=self.builder,
                 module=self.module,
-                symbol_table=self.symbol_table)
+                symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
         if p[1] in self.comp:
             return CompOp(
@@ -454,7 +461,7 @@ class PCLParser(Parser):
                 rhs=p[-1],
                 builder=self.builder,
                 module=self.module,
-                symbol_table=self.symbol_table)
+                symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
         raise ValueError('BinOp not parsed correctly.')
 
@@ -471,7 +478,7 @@ class PCLParser(Parser):
             exprs=p.comma_expr_list,
             builder=self.builder,
             module=self.module,
-            symbol_table=self.symbol_table)
+            symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
     @_('NAME LPAREN RPAREN')
     def call(self, p):
@@ -480,7 +487,7 @@ class PCLParser(Parser):
             exprs=deque([]),
             builder=self.builder,
             module=self.module,
-            symbol_table=self.symbol_table)
+            symbol_table=self.symbol_table, lineno=self.get_lineno(p))
 
     @_('call')
     def expr(self, p):
@@ -511,7 +518,7 @@ if __name__ == '__main__':
         forward procedure yes();
 
         var x : integer;
-        
+
         procedure yes();
         begin
             writeString("YES");
@@ -525,7 +532,7 @@ if __name__ == '__main__':
         end;
 
         begin
-            yes();
+            moo();
         end.
     '''
 
