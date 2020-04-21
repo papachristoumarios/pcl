@@ -126,21 +126,15 @@ class Scope:
         self.globals = {}
         self.name = name
 
-    def lookup(self, c, global_=False):
-        if global_:
-            return self.globals.get(c, None)
-        else:
-            return self.locals_.get(c, None)
+    def lookup(self, c):
+        return self.locals_.get(c, None)
 
-    def insert(self, c, st, global_=False):
-        if self.lookup(c, global_=global_):
+    def insert(self, c, st):
+        if self.lookup(c):
             msg = 'Duplicate name {}'.format(c)
             raise PCLSymbolTableError(msg)
         else:
-            if global_:
-                self.globals[c] = st
-            else:
-                self.locals_[c] = st
+            self.locals_[c] = st
 
 
 class FormalScope:
@@ -210,21 +204,18 @@ class SymbolTable:
         self.scopes.pop()
         self.formals.pop()
 
-    def lookup(self, c, last_scope=False, adaptive=True, all_global=False):
+    def lookup(self, c, last_scope=False):
         if len(self.scopes) == 0:
             raise PCLSymbolTableError('Scopes do not exist')
 
-        if not(adaptive ^ all_global):
-            raise PCLSymbolTableError('Incompatible query modes supplied')
-
         if last_scope:
-            entry = self.scopes[-1].lookup(c, global_=all_global)
+            entry = self.scopes[-1].lookup(c)
             if entry:
                 entry.num_queries += 1
                 return entry
         else:
-            for i, scope in enumerate(reversed(self.scopes)):
-                entry = scope.lookup(c, global_=(adaptive and i == 0) or all_global)
+            for scope in reversed(self.scopes):
+                entry = scope.lookup(c)
                 if entry:
                     entry.num_queries += 1
                     return entry
@@ -232,11 +223,11 @@ class SymbolTable:
         msg = 'Unknown name: {}'.format(c)
         raise PCLSymbolTableError(msg)
 
-    def insert(self, c, t, global_=False):
+    def insert(self, c, t):
         if len(self.scopes) == 0:
             raise PCLSymbolTableError('Scopes do not exist')
 
-        self.scopes[-1].insert(c, t, global_=global_)
+        self.scopes[-1].insert(c, t)
 
     def insert_formal(self, header, formal, t):
         if len(self.formals) == 0:

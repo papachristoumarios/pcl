@@ -514,16 +514,17 @@ if __name__ == '__main__':
     s = '''
         program custom_str;
         var x : integer;
-        procedure foo(var u: array [2] of char);
+
+        procedure foo();
+            var x : integer;
         begin
-            writeString(u);
+            writeInteger(x);
+            x := x + 1;
         end;
 
-
         begin
-            x := readInteger();
-            writeInteger(x);
-            writeChar('\n');
+            x := 1;
+            foo();
             writeInteger(x);
         end.
 

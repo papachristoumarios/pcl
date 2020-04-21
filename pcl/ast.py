@@ -377,13 +377,31 @@ class Var(Local):
     def codegen(self):
         self.type_.codegen()
         for id_ in self.ids:
-            id_cvalue = self.builder.alloca(self.type_.cvalue)
+            # Local symbol
+            # id_cvalue = self.builder.alloca(self.type_.cvalue)
+            # var_entry = SymbolEntry(
+            #     stype=self.type_.stype,
+            #     name_type=NameType.N_VAR,
+            #     cvalue=id_cvalue)
+            # self.symbol_table.insert(id_, var_entry)
+
+            # Global symbol
+
+            # Name is needed for initialization
+            # Should not be used by the programmer
+            global_id_name = '{}_{}'.format(id_, len(self.symbol_table.scopes)-1)
+            global_id_cvalue = ir.GlobalVariable(self.module, self.type_.cvalue, name=global_id_name)
+
+            # Set initializer to zeroinitializer ir.Constant(typ, None)
+            global_id_cvalue.initializer = ir.Constant(self.type_.cvalue, None)
+
             var_entry = SymbolEntry(
                 stype=self.type_.stype,
                 name_type=NameType.N_VAR,
-                cvalue=id_cvalue)
-            self.symbol_table.insert(id_, var_entry)
+                cvalue=global_id_cvalue)
 
+            # Register global symbol to symbol table
+            self.symbol_table.insert(id_, var_entry)
 
 class Label(Local):
     def __init__(self, ids, builder, module, symbol_table, lineno):
@@ -1315,6 +1333,8 @@ class NameLValue(LValue):
         self.gep = self.symbol_table.lookup(self.id_).cvalue
         # OPTIMIZE remove redundant loads
         if self.load:
+            # if isinstance(self.gep, ir.GlobalVariable):
+
             self.cvalue = self.builder.load(self.gep)
 
     def set_nil(self):
@@ -1461,12 +1481,6 @@ class LBrack(LValue):
     def codegen(self):
         self.expr.codegen()
         self.lvalue.codegen()
-        #
-        # if self.lvalue.stype[0] == ComposerType.T_VAR_ARRAY:
-        #
-        #     # Go one up
-        #     temp = self.builder.load(self.lvalue.gep)
-        #     self.gep = self.builder.gep(temp, [self.expr.cvalue], inbounds=True)
 
         self.gep = self.builder.gep(self.lvalue.gep, [LLVMConstants.ZERO_INT, self.expr.cvalue])
 
