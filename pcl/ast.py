@@ -40,36 +40,41 @@ class AST(ABC):
         # Keep line number
         self.lineno = lineno
 
-    def eval(self):
-        pass
-
     def raise_exception_helper(self, msg, exception=PCLSemError):
+        ''' Helper function to raise Exceptions including line numbers '''
         msg_new = '{} at line {}: {}'.format(self.__class__.__name__, self.lineno, msg)
         raise exception(msg_new)
 
     def raise_warning_helper(self, msg):
+        ''' Helper function to raise warnings including line numbers '''
         msg_new = 'WARNING {} at line {}: {}\n'.format(self.__class__.__name__, self.lineno, msg)
         sys.stderr.write(msg_new)
 
+    @abstractmethod
     def sem(self):
+        ''' Abstract method for semantic analysis '''
         msg = 'sem method not implemented for {}'.format(
             self.__class__.__name__)
         raise NotImplementedError(msg)
 
     @staticmethod
     def sem_decorator(sem_fn):
+        ''' Decorator that allows memoization on semantic analysis '''
         def wrapper(self):
             if self.stype is None:
                 sem_fn(self)
         return wrapper
 
+    @abstractmethod
     def codegen(self):
+        ''' Abstract method for code generation '''
         msg = 'codegen method not implemented for {}'.format(
             self.__class__.__name__)
         raise NotImplementedError(msg)
 
     @staticmethod
     def codegen_decorator(codegen_fn):
+        ''' Decorator that allows memoization on code generation '''
         def wrapper(self):
             if self.cvalue is None:
                 codegen_fn(self)
@@ -98,36 +103,39 @@ class AST(ABC):
         self.raise_exception_helper(msg, PCLSemError)
 
     def print_module(self):
+        ''' Prints (non-verified) LLVM code at the given node '''
         print(str(self.module))
 
     def pprint(self, indent=0):
         '''
             Pretty printing of a node's contents and
             its sucessors. Call it with root.pprint()
+            Output to stderr.
         '''
-        sys.stdout.write('{}{}'.format(indent * ' ', type(self)))
-        # print(indent * ' ', end='')
-        # print(type(self))
+        sys.stderr.write('{}{}'.format(indent * ' ', type(self)))
         d = vars(self)
         for k, v in d.items():
 
             if k not in ['module', 'builder', 'symbol_table']:
                 if isinstance(v, AST):
-                    sys.stdout.write((indent - 1) * ' ')
+                    sys.stderr.write((indent - 1) * ' ')
                     v.pprint(indent + 1)
                 elif isinstance(v, deque):
                     for x in v:
-                        sys.stdout.write((indent - 1) * ' ')
+                        sys.stderr.write((indent - 1) * ' ')
                         if isinstance(x, AST):
                             x.pprint(indent + 1)
                         else:
-                            sys.stdout.write((indent + 1) * ' ' + x + '\n')
+                            sys.stderr.write((indent + 1) * ' ' + x + '\n')
                 else:
-                    sys.stdout.write((indent + 2) * ' ')
-                    sys.stdout.write('{} : {}\n'.format(k, v))
+                    sys.stderr.write((indent + 2) * ' ')
+                    sys.stderr.write('{} : {}\n'.format(k, v))
 
 
 class Program(AST):
+    '''
+        Main program AST node. Contains the body of the program
+    '''
     def __init__(self, id_, body, builder, module, symbol_table, lineno):
         super(Program, self).__init__(builder, module, symbol_table, lineno)
         self.id_ = id_
@@ -135,6 +143,10 @@ class Program(AST):
 
     @AST.sem_decorator
     def sem(self):
+        '''
+            Creates the main scope of the program and
+            proceeds to the program body.
+        '''
         # Open program scope
         self.symbol_table.open_scope()
 
@@ -146,6 +158,10 @@ class Program(AST):
 
     @AST.codegen_decorator
     def codegen(self):
+        '''
+            Creates the main scope of the program and
+            proceeds to the program body.
+        '''
         # Open program scope
         self.symbol_table.open_scope()
 
@@ -313,19 +329,24 @@ class LocalHeader(Local):
                     # arg_entry_cvalue = self.builder.load(arg)
                     # arg_entry = SymbolEntry(stype=formal.stype, name_type=NameType.N_VAR, cvalue=arg_entry_cvalue)
                     # counter += 1
+
+            # Open a named scope
             self.symbol_table.open_scope(self.header.id_)
 
+            # Process the header
             self.header.codegen()
 
-
+            # Process arguments inside the function / proc.
             counter = 0
             for formal in self.header.formals:
                 for formal_id in formal.ids:
                     arg = header_args[counter]
                     if not formal.by_reference:
+                        # Make a copy of the variable
                         arg_cvalue = self.builder.alloca(arg.type)
                         self.builder.store(arg, arg_cvalue)
                     else:
+                        # Pass the variable pointer
                         arg_cvalue = arg
                     arg_entry = SymbolEntry(
                         stype=formal.stype,
@@ -334,15 +355,10 @@ class LocalHeader(Local):
                     self.symbol_table.insert(formal_id, arg_entry)
                     counter += 1
 
+            # Run codegen to body
             self.body.codegen()
 
-
-            # Guardian return (return is not specified at the end of fcn/proc)
-            # guardian_return_block = header_cvalue.append_basic_block(
-                # self.header.id_ + '_return')
-
-            # self.builder.position_at_start(guardian_return_block)
-
+            # Guardian return statements
             try:
                 # Function
                 result_cvalue_ptr = self.symbol_table.lookup('result').cvalue
@@ -351,7 +367,6 @@ class LocalHeader(Local):
             except PCLSymbolTableError:
                 # Procedure
                 self.builder.ret_void()
-
 
             self.symbol_table.close_scope()
 
@@ -393,18 +408,11 @@ class Var(Local):
     def codegen(self):
         self.type_.codegen()
         for id_ in self.ids:
-            # Local symbol
-            # id_cvalue = self.builder.alloca(self.type_.cvalue)
-            # var_entry = SymbolEntry(
-            #     stype=self.type_.stype,
-            #     name_type=NameType.N_VAR,
-            #     cvalue=id_cvalue)
-            # self.symbol_table.insert(id_, var_entry)
-
-            # Global symbol
+            # Global symbols
 
             # Name is needed for initialization
             # Should not be used by the programmer
+            # Naming convention is by definition unique
             global_id_name = '{}_{}'.format(id_, len(self.symbol_table.scopes)-1)
             global_id_cvalue = ir.GlobalVariable(self.module, self.type_.cvalue, name=global_id_name)
 
@@ -581,6 +589,9 @@ class Formal(AST):
 
         self.stype = self.type_.stype
 
+    @AST.codegen_decorator
+    def codegen(self):
+        pass    
 
 class Type(AST):
 
@@ -754,9 +765,8 @@ class Call(Statement):
         for expr, formal_type, (_, formal) in zip(self.exprs, call_entry_cvalue.args, formals):
             expr.codegen()
             if formal.by_reference:
-                if expr.gep:
-                    ptr = expr.gep
-                    # import pdb; pdb.set_trace()
+                if expr.ptr:
+                    ptr = expr.ptr
                     if ptr.type != formal_type.type:
                         ptr = self.builder.bitcast(ptr, formal_type.type)
 
@@ -765,7 +775,7 @@ class Call(Statement):
                     raise NotImplementedError()
             else:
                 if isinstance(expr, StringLiteral):
-                    ptr = expr.gep
+                    ptr = expr.ptr
                     real_params.append(ptr)
                 else:
                     real_params.append(expr.cvalue)
@@ -945,16 +955,16 @@ class New(Statement):
     @AST.codegen_decorator
     def codegen(self):
         self.lvalue.codegen()
-        # alloca_type = self.lvalue.gep.type.pointee.pointee
+        # alloca_type = self.lvalue.ptr.type.pointee.pointee
 
         # if self.expr:
         #     self.expr.codegen()
-        #     self.cvalue = self.builder.alloca(self.lvalue.gep.type.pointee.pointee.pointee, self.expr.cvalue)
+        #     self.cvalue = self.builder.alloca(self.lvalue.ptr.type.pointee.pointee.pointee, self.expr.cvalue)
         #     # import pdb; pdb.set_trace()
         #     self.builder.store(self.cvalue, self.lvalue.cvalue)
         # else:
-        self.cvalue = self.builder.alloca(self.lvalue.gep.type.pointee.pointee)
-        self.builder.store(self.cvalue, self.lvalue.gep)
+        self.cvalue = self.builder.alloca(self.lvalue.ptr.type.pointee.pointee)
+        self.builder.store(self.cvalue, self.lvalue.ptr)
 
 
 class Dispose(Statement):
@@ -1312,8 +1322,8 @@ class CompOp(RValue):
                 self.cvalue = self.builder.fcmp_ordered(
                     cmp_op, lhs_cvalue, rhs_cvalue)
         elif self.op in ['=', '<>']:
-                # lhs_cvalue = self.builder.ptrtoint(self.lhs.cvalue, LLVMTypes.T_INT)
-                # rhs_cvalue = self.builder.ptrtoint(self.rhs.cvalue, LLVMTypes.T_INT)
+                # lhs_cvalue = self.builder.geptoint(self.lhs.cvalue, LLVMTypes.T_INT)
+                # rhs_cvalue = self.builder.geptoint(self.rhs.cvalue, LLVMTypes.T_INT)
                 self.cvalue = self.builder.icmp_signed(cmp_op, self.lhs.cvalue, self.rhs.cvalue)
 
 
@@ -1381,7 +1391,7 @@ class LValue(Expr):
     def __init__(self, builder, module, symbol_table, lineno):
         super(LValue, self).__init__(builder, module, symbol_table, lineno)
         self.load = False
-        self.gep = None
+        self.ptr = None
 
 
 class NameLValue(LValue):
@@ -1403,10 +1413,10 @@ class NameLValue(LValue):
 
     @AST.codegen_decorator
     def codegen(self):
-        self.gep = self.symbol_table.lookup(self.id_).cvalue
+        self.ptr = self.symbol_table.lookup(self.id_).cvalue
         # OPTIMIZE remove redundant loads
         if self.load:
-            self.cvalue = self.builder.load(self.gep)
+            self.cvalue = self.builder.load(self.ptr)
 
     def set_nil(self):
         # Result is a pointer to our type e.g. for integer variable i32 it is *i32
@@ -1435,10 +1445,10 @@ class Result(NameLValue):
 
     @AST.codegen_decorator
     def codegen(self):
-       self.gep = self.symbol_table.lookup('result').cvalue
+       self.ptr = self.symbol_table.lookup('result').cvalue
 
        if self.load:
-           self.cvalue = self.builder.load(self.gep)
+           self.cvalue = self.builder.load(self.ptr)
 
 class StringLiteral(LValue):
     '''
@@ -1463,8 +1473,8 @@ class StringLiteral(LValue):
             ir.ArrayType(
                 LLVMTypes.T_CHAR, self.length), bytearray(
                 self.literal.encode("utf-8")))
-        self.gep = self.builder.alloca(self.cvalue.type)
-        self.builder.store(self.cvalue, self.gep)
+        self.ptr = self.builder.alloca(self.cvalue.type)
+        self.builder.store(self.cvalue, self.ptr)
 
 
 class Deref(LValue):
@@ -1496,7 +1506,7 @@ class Deref(LValue):
     @AST.codegen_decorator
     def codegen(self):
         self.expr.codegen()
-        self.gep = self.expr.cvalue
+        self.ptr = self.expr.cvalue
         self.cvalue = self.builder.load(self.expr.cvalue)
 
 
@@ -1537,12 +1547,12 @@ class SetExpression(LValue):
 
         if self.expr.stype[1] == BaseType.T_NIL:
             self.lvalue.set_nil()
-        elif self.lvalue.gep:
+        elif self.lvalue.ptr:
             if self.lvalue.stype == (ComposerType.T_NO_COMP, BaseType.T_REAL) and self.expr.stype == (ComposerType.T_NO_COMP, BaseType.T_INT):
                 expr_cvalue = self.builder.sitofp(self.expr.cvalue, LLVMTypes.T_REAL)
             else:
                 expr_cvalue = self.expr.cvalue
-            self.builder.store(expr_cvalue, self.lvalue.gep)
+            self.builder.store(expr_cvalue, self.lvalue.ptr)
 
 
 class LBrack(LValue):
@@ -1567,6 +1577,6 @@ class LBrack(LValue):
         self.expr.codegen()
         self.lvalue.codegen()
 
-        self.gep = self.builder.gep(self.lvalue.gep, [LLVMConstants.ZERO_INT, self.expr.cvalue])
+        self.ptr = self.builder.gep(self.lvalue.ptr, [LLVMConstants.ZERO_INT, self.expr.cvalue])
 
-        self.cvalue = self.builder.load(self.gep)
+        self.cvalue = self.builder.load(self.ptr)
