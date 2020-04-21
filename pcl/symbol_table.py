@@ -210,18 +210,21 @@ class SymbolTable:
         self.scopes.pop()
         self.formals.pop()
 
-    def lookup(self, c, last_scope=False, global_=False):
+    def lookup(self, c, last_scope=False, adaptive=True, all_global=False):
         if len(self.scopes) == 0:
             raise PCLSymbolTableError('Scopes do not exist')
 
+        if not(adaptive ^ all_global):
+            raise PCLSymbolTableError('Incompatible query modes supplied')
+
         if last_scope:
-            entry = self.scopes[-1].lookup(c, global_=global_)
+            entry = self.scopes[-1].lookup(c, global_=all_global)
             if entry:
                 entry.num_queries += 1
                 return entry
         else:
-            for scope in reversed(self.scopes):
-                entry = scope.lookup(c, global_=global_)
+            for i, scope in enumerate(reversed(self.scopes)):
+                entry = scope.lookup(c, global_=(adaptive and i == 0) or all_global)
                 if entry:
                     entry.num_queries += 1
                     return entry
