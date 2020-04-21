@@ -591,7 +591,7 @@ class Formal(AST):
 
     @AST.codegen_decorator
     def codegen(self):
-        pass    
+        pass
 
 class Type(AST):
 
@@ -669,6 +669,7 @@ class Statement(AST):
     @AST.codegen_decorator
     def codegen(self):
         if self.name:
+            # Declare labeled statement as a basic block
             self.cvalue = self.builder.append_basic_block(self.name)
             self.builder.branch(self.cvalue)
             label_entry = SymbolEntry(
@@ -678,11 +679,11 @@ class Statement(AST):
                 name_type=NameType.N_LABEL,
                 cvalue=self.cvalue)
             self.symbol_table.insert(self.name, label_entry)
-            # TODO FIX
-            # with self.builder.goto_block(self.cvalue):
             self.builder.position_at_start(self.cvalue)
             next_block = self.builder.append_basic_block()
             self.stmt.codegen()
+
+            # Branch to next block
             self.builder.branch(next_block)
             self.builder.position_at_start(next_block)
 
@@ -695,13 +696,18 @@ class Block(Statement):
 
     @AST.sem_decorator
     def sem(self):
+        # No scope need should be opened because
+        # every scope that contains local
+        # is the result of the following actions in PCL
+        # 1. program
+        # 2. function / procedure declaration
+        # If locals were allowed before every block then
+        # we should open an additional scope here
         for stmt in self.stmt_list:
             stmt.sem()
 
     @AST.codegen_decorator
     def codegen(self):
-        #helper_block = self.builder.append_basic_block()
-        #with self.builder.goto(helper_block):
         for stmt in self.stmt_list:
             stmt.codegen()
 

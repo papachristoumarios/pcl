@@ -118,4 +118,4 @@ class PCLCodegen:
             output_filename = filename + '.out'
 
             os.system('llc -filetype=obj {} -o {}'.format(llvm_filename, obj_filename))
-            os.system('gcc {} /home/marios/workspace/pcl/pcl/libbuiltins.so -Wall -lm -o {}'.format(obj_filename, output_filename))
+            os.system('gcc {} -Wall -lbuiltins -lm -o {}'.format(obj_filename, output_filename))
