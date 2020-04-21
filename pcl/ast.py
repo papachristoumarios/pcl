@@ -376,7 +376,6 @@ class Var(Local):
 
     def codegen(self):
         self.type_.codegen()
-
         for id_ in self.ids:
             id_cvalue = self.builder.alloca(self.type_.cvalue)
             var_entry = SymbolEntry(
