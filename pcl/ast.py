@@ -47,6 +47,10 @@ class AST(ABC):
         msg_new = '{} at line {}: {}'.format(self.__class__.__name__, self.lineno, msg)
         raise exception(msg_new)
 
+    def raise_warning_helper(self, msg):
+        msg_new = 'WARNING {} at line {}: {}\n'.format(self.__class__.__name__, self.lineno, msg)
+        sys.stderr.write(msg_new)
+
     def sem(self):
         msg = 'sem method not implemented for {}'.format(
             self.__class__.__name__)
@@ -828,10 +832,9 @@ class Return(Statement):
     def sem(self):
         try:
             result_entry = self.symbol_table.lookup('result')
-            # TODO Is this needed?
-            if result_entry.num_queries == 1:
+            if result_entry.num_queries <= 1:
                 msg = 'Result must be set once'
-                self.raise_exception_helper(msg, PCLSemError)
+                self.raise_warning_helper(msg)
         except PCLSymbolTableError:
             pass
 
@@ -1325,16 +1328,14 @@ class NameLValue(LValue):
     def sem(self):
         result = self.symbol_table.lookup(self.id_)
         self.stype = result.stype
-        # if self.load and result.num_queries == 1:
-        # msg = 'Uniitialized lvalue: {}'.format(self.id_)
-        # raise PCLSemError(msg)
+        if self.load and result.num_queries <= 1:
+            msg = 'Uniitialized lvalue: {}'.format(self.id_)
+            self.raise_warning_helper(msg)
 
     def codegen(self):
         self.gep = self.symbol_table.lookup(self.id_).cvalue
         # OPTIMIZE remove redundant loads
         if self.load:
-            # if isinstance(self.gep, ir.GlobalVariable):
-
             self.cvalue = self.builder.load(self.gep)
 
     def set_nil(self):
