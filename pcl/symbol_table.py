@@ -121,10 +121,9 @@ builtins = [
 
 
 class Scope:
-    def __init__(self, name, offset=-1, size=0):
+    def __init__(self, name):
         self.locals_ = {}
-        self.offset = offset
-        self.size = size
+        self.globals = {}
         self.name = name
 
     def lookup(self, c):
@@ -135,17 +134,12 @@ class Scope:
             msg = 'Duplicate name {}'.format(c)
             raise PCLSymbolTableError(msg)
         else:
-            st.offset = self.offset
-            self.offset += 1
             self.locals_[c] = st
-            self.size += 1
 
 
 class FormalScope:
     def __init__(self, name, offset=-1, size=0):
         self.locals_ = defaultdict(OrderedDict)
-        self.offset = offset
-        self.size = size
         self.name = name
 
     def lookup(self, h, c):
@@ -156,10 +150,7 @@ class FormalScope:
             msg = 'Duplicate formal {}'.format(c)
             raise PCLSymbolTableError(msg)
         else:
-            st.offset = self.offset
-            self.offset += 1
             self.locals_[h][c] = st
-            self.size += 1
 
 
 class SymbolTable:
@@ -197,14 +188,8 @@ class SymbolTable:
         self.close_scope()
 
     def open_scope(self, name=None):
-        if len(self.scopes) == 0:
-            ofs = 0
-            ofs_formal = 0
-        else:
-            ofs = self.scopes[-1].offset
-            ofs_formal = self.formals[-1].offset
-        scope = Scope(name=name, offset=ofs)
-        formal = FormalScope(name=name, offset=ofs_formal)
+        scope = Scope(name=name)
+        formal = FormalScope(name=name)
         self.scopes.append(scope)
         self.formals.append(formal)
         if name is not None:
@@ -283,7 +268,3 @@ class SymbolTable:
                 msg = 'Expected forward declaration for header: {}'.format(
                     header)
                 raise PCLSymbolTableError(msg)
-
-
-if __name__ == '__main__':
-    pass
