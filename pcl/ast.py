@@ -56,22 +56,24 @@ class AST(ABC):
             self.__class__.__name__)
         raise NotImplementedError(msg)
 
-    def _sem_decorator(sem_fn):
+    @staticmethod
+    def sem_decorator(sem_fn):
         def wrapper(self):
             if self.stype is None:
                 sem_fn(self)
-            return wrapper
+        return wrapper
 
     def codegen(self):
         msg = 'codegen method not implemented for {}'.format(
             self.__class__.__name__)
         raise NotImplementedError(msg)
 
-    def _codegen_decorator(codegen_fn):
+    @staticmethod
+    def codegen_decorator(codegen_fn):
         def wrapper(self):
             if self.cvalue is None:
                 codegen_fn(self)
-            return wrapper
+        return wrapper
 
     def pipeline(self, *stages):
         for stage in stages:
@@ -131,6 +133,7 @@ class Program(AST):
         self.id_ = id_
         self.body = body
 
+    @AST.sem_decorator
     def sem(self):
         # Open program scope
         self.symbol_table.open_scope()
@@ -141,6 +144,7 @@ class Program(AST):
         # Close main scope
         self.symbol_table.close_scope()
 
+    @AST.codegen_decorator
     def codegen(self):
         # Open program scope
         self.symbol_table.open_scope()
@@ -159,6 +163,7 @@ class Body(AST):
         self.locals_ = locals_
         self.block = block
 
+    @AST.sem_decorator
     def sem(self):
         # Run semantic to locals
         for local in self.locals_:
@@ -167,6 +172,7 @@ class Body(AST):
         # Run sem to block
         self.block.sem()
 
+    @AST.codegen_decorator
     def codegen(self):
         # Run codegen to locals
         for local in self.locals_:
@@ -186,6 +192,7 @@ class LocalHeader(Local):
         self.header = header
         self.body = body
 
+    @AST.sem_decorator
     def sem(self):
         # TODO add declaration mismatch with forward and localheader
 
@@ -233,6 +240,7 @@ class LocalHeader(Local):
         # Close function scope
         self.symbol_table.close_scope()
 
+    @AST.codegen_decorator
     def codegen(self):
 
         # Infer function type (signature)
@@ -354,10 +362,12 @@ class VarList(Local):
         super(VarList, self).__init__(builder, module, symbol_table, lineno)
         self.vars_ = vars_
 
+    @AST.sem_decorator
     def sem(self):
         for var in self.vars_:
             var.sem()
 
+    @AST.codegen_decorator
     def codegen(self):
         for var in self.vars_:
             var.codegen()
@@ -369,6 +379,7 @@ class Var(Local):
         self.ids = ids
         self.type_ = type_
 
+    @AST.sem_decorator
     def sem(self):
         self.type_.sem()
         # Iterate over all names and register variables
@@ -378,6 +389,7 @@ class Var(Local):
                 name_type=NameType.N_VAR)
             self.symbol_table.insert(id_, var_entry)
 
+    @AST.codegen_decorator
     def codegen(self):
         self.type_.codegen()
         for id_ in self.ids:
@@ -412,6 +424,7 @@ class Label(Local):
         super(Label, self).__init__(builder, module, symbol_table, lineno)
         self.ids = ids
 
+    @AST.sem_decorator
     def sem(self):
         # Iterate over all names and register variables
         for id_ in self.ids:
@@ -422,6 +435,7 @@ class Label(Local):
                 name_type=NameType.N_LABEL)
             self.symbol_table.insert(id_, label_entry)
 
+    @AST.codegen_decorator
     def codegen(self):
         pass
 
@@ -432,6 +446,7 @@ class Forward(Local):
         super(Forward, self).__init__(builder, module, symbol_table, lineno)
         self.header = header
 
+    @AST.sem_decorator
     def sem(self):
         if self.header.func_type:
             self.header.func_type.sem()
@@ -453,6 +468,7 @@ class Forward(Local):
                 self.symbol_table.insert_formal(
                     'forward_' + self.header.id_, formal_id, formal_entry)
 
+    @AST.codegen_decorator
     def codegen(self):
         # Infer function type (signature)
         if self.header.func_type:
@@ -521,6 +537,7 @@ class Header(AST):
         self.formals = formals
         self.func_type = func_type
 
+    @AST.sem_decorator
     def sem(self):
         if self.func_type:
             result_entry = SymbolEntry(
@@ -528,6 +545,7 @@ class Header(AST):
                 name_type=NameType.N_VAR)
             self.symbol_table.insert('result', result_entry)
 
+    @AST.codegen_decorator
     def codegen(self):
         if self.func_type:
             self.func_type.codegen()
@@ -554,6 +572,7 @@ class Formal(AST):
         self.type_ = type_
         self.by_reference = by_reference
 
+    @AST.sem_decorator
     def sem(self):
         self.type_.sem()
         if self.type_.stype[0] in [ComposerType.T_CONST_ARRAY, ComposerType.T_VAR_ARRAY] and (not self.by_reference):
@@ -569,9 +588,11 @@ class Type(AST):
         super(Type, self).__init__(builder, module, symbol_table, lineno)
         self.type_ = type_
 
+    @AST.sem_decorator
     def sem(self):
         self.stype = (ComposerType.T_NO_COMP, BaseType(self.type_))
 
+    @AST.codegen_decorator
     def codegen(self):
         self.cvalue = LLVMTypes.mapping[self.type_]
 
@@ -586,11 +607,13 @@ class PointerType(Type):
         super(PointerType, self).__init__(type_, builder, module, symbol_table, lineno)
         self.type_ = type_
 
+    @AST.sem_decorator
     def sem(self):
         self.type_.sem()
         base_type = self.type_.stype
         self.stype = (ComposerType.T_PTR, base_type)
 
+    @AST.codegen_decorator
     def codegen(self):
         self.type_.codegen()
         self.cvalue = ir.PointerType(self.type_.cvalue)
@@ -602,6 +625,7 @@ class ArrayType(Type):
         super(ArrayType, self).__init__(type_, builder, module, symbol_table, lineno)
         self.length = int(length)
 
+    @AST.sem_decorator
     def sem(self):
         self.type_.sem()
         if self.length > 0:
@@ -612,6 +636,7 @@ class ArrayType(Type):
             msg = 'Negative length specified'
             self.raise_exception_helper(msg, PCLSemError)
 
+    @AST.codegen_decorator
     def codegen(self):
         self.type_.codegen()
         self.cvalue = ir.ArrayType(self.type_.cvalue, self.length)
@@ -624,11 +649,13 @@ class Statement(AST):
         self.name = kwargs.get('name', None)
         self.stmt = kwargs.get('stmt', None)
 
+    @AST.sem_decorator
     def sem(self):
         if self.name:
             self.symbol_table.lookup(self.name)
             self.stmt.sem()
 
+    @AST.codegen_decorator
     def codegen(self):
         if self.name:
             self.cvalue = self.builder.append_basic_block(self.name)
@@ -655,10 +682,12 @@ class Block(Statement):
         super(Block, self).__init__(builder, module, symbol_table, lineno)
         self.stmt_list = stmt_list
 
+    @AST.sem_decorator
     def sem(self):
         for stmt in self.stmt_list:
             stmt.sem()
 
+    @AST.codegen_decorator
     def codegen(self):
         #helper_block = self.builder.append_basic_block()
         #with self.builder.goto(helper_block):
@@ -672,6 +701,7 @@ class Call(Statement):
         self.id_ = id_
         self.exprs = exprs
 
+    @AST.sem_decorator
     def sem(self):
 
         # Assert that if call is recursive (calee calls himself) then fcn must
@@ -705,6 +735,7 @@ class Call(Statement):
                     msg = 'Incompatible assignment type: {}'.format(formal_name)
                     self.raise_exception_helper(msg, PCLSemError)
 
+    @AST.codegen_decorator
     def codegen(self):
         # WIP
         real_params = []
@@ -753,6 +784,7 @@ class If(Statement):
         self.stmt = stmt
         self.else_stmt = else_stmt
 
+    @AST.sem_decorator
     def sem(self):
         self.expr.sem()
         self.expr.type_check((ComposerType.T_NO_COMP, BaseType.T_BOOL))
@@ -761,6 +793,7 @@ class If(Statement):
         if self.else_stmt:
             self.else_stmt.sem()
 
+    @AST.codegen_decorator
     def codegen(self):
         self.expr.codegen()
 
@@ -785,11 +818,13 @@ class While(Statement):
         self.expr = expr
         self.stmt = stmt
 
+    @AST.sem_decorator
     def sem(self):
         self.expr.sem()
         self.expr.type_check((ComposerType.T_NO_COMP, BaseType.T_BOOL))
         self.stmt.sem()
 
+    @AST.codegen_decorator
     def codegen(self):
         w_body_block = self.builder.append_basic_block()
         w_after_block = self.builder.append_basic_block()
@@ -811,9 +846,11 @@ class Goto(Statement):
         super(Goto, self).__init__(builder, module, symbol_table, lineno)
         self.id_ = id_
 
+    @AST.sem_decorator
     def sem(self):
         self.symbol_table.lookup(self.id_, last_scope=True)
 
+    @AST.codegen_decorator
     def codegen(self):
         # TODO fix non terminating block
         helper_block = self.builder.append_basic_block()
@@ -829,6 +866,7 @@ class Return(Statement):
         Return statement.
     '''
 
+    @AST.sem_decorator
     def sem(self):
         try:
             result_entry = self.symbol_table.lookup('result')
@@ -838,6 +876,7 @@ class Return(Statement):
         except PCLSymbolTableError:
             pass
 
+    @AST.codegen_decorator
     def codegen(self):
         return_block = self.builder.append_basic_block()
         self.builder.branch(return_block)
@@ -859,9 +898,11 @@ class Empty(Statement):
         Empty Statement.
     '''
 
+    @AST.sem_decorator
     def sem(self):
         pass
 
+    @AST.codegen_decorator
     def codegen(self):
         pass
 
@@ -876,6 +917,7 @@ class New(Statement):
         self.expr = expr
         self.lvalue = lvalue
 
+    @AST.sem_decorator
     def sem(self):
         self.lvalue.sem()
         if self.expr:
@@ -900,6 +942,7 @@ class New(Statement):
             # ^t -> t
             self.stype = self.lvalue.stype[1]
 
+    @AST.codegen_decorator
     def codegen(self):
         self.lvalue.codegen()
         # alloca_type = self.lvalue.gep.type.pointee.pointee
@@ -924,6 +967,7 @@ class Dispose(Statement):
         self.lvalue = lvalue
         self.brackets = brackets
 
+    @AST.sem_decorator
     def sem(self):
         self.lvalue.sem()
 
@@ -939,6 +983,7 @@ class Dispose(Statement):
 
         self.stype = (ComposerType.T_NO_COMP, BaseType.T_NIL)
 
+    @AST.codegen_decorator
     def codegen(self):
         self.lvalue.codegen()
         self.lvalue.set_nil()
@@ -979,9 +1024,11 @@ class IntegerConst(RValue):
         super(IntegerConst, self).__init__(builder, module, symbol_table, lineno)
         self.value = int(value)
 
+    @AST.sem_decorator
     def sem(self):
         self.stype = (ComposerType.T_NO_COMP, BaseType.T_INT)
 
+    @AST.codegen_decorator
     def codegen(self):
         self.cvalue = ir.Constant(LLVMTypes.T_INT, self.value)
 
@@ -995,9 +1042,11 @@ class RealConst(RValue):
         super(RealConst, self).__init__(builder, module, symbol_table, lineno)
         self.value = float(value)
 
+    @AST.sem_decorator
     def sem(self):
         self.stype = (ComposerType.T_NO_COMP, BaseType.T_REAL)
 
+    @AST.codegen_decorator
     def codegen(self):
         self.cvalue = ir.Constant(LLVMTypes.T_REAL, self.value)
 
@@ -1011,9 +1060,11 @@ class CharConst(RValue):
         super(CharConst, self).__init__(builder, module, symbol_table, lineno)
         self.value = ord(value)
 
+    @AST.sem_decorator
     def sem(self):
         self.stype = (ComposerType.T_NO_COMP, BaseType.T_CHAR)
 
+    @AST.codegen_decorator
     def codegen(self):
         self.cvalue = ir.Constant(LLVMTypes.T_CHAR, self.value)
 
@@ -1027,9 +1078,11 @@ class BoolConst(RValue):
         super(BoolConst, self).__init__(builder, module, symbol_table, lineno)
         self.value = int(value == 'true')
 
+    @AST.sem_decorator
     def sem(self):
         self.stype = (ComposerType.T_NO_COMP, BaseType.T_BOOL)
 
+    @AST.codegen_decorator
     def codegen(self):
         self.cvalue = ir.Constant(LLVMTypes.T_BOOL, self.value)
 
@@ -1044,6 +1097,7 @@ class Ref(RValue):
         super(Ref, self).__init__(builder, module, symbol_table, lineno)
         self.lvalue = lvalue
 
+    @AST.sem_decorator
     def sem(self):
         self.lvalue.sem()
         self.stype = (ComposerType.T_PTR, self.lvalue.stype)
@@ -1057,9 +1111,11 @@ class Nil(RValue):
     def __init__(self, builder, module, symbol_table, lineno):
         super(Nil, self).__init__(builder, module, symbol_table, lineno)
 
+    @AST.sem_decorator
     def sem(self):
         self.stype = (ComposerType.T_NO_COMP, BaseType.T_NIL)
 
+    @AST.codegen_decorator
     def codegen(self):
         pass
 
@@ -1073,11 +1129,13 @@ class ArUnOp(RValue):
         self.op = op
         self.rhs = rhs
 
+    @AST.sem_decorator
     def sem(self):
         self.rhs.sem()
         self.rhs.type_check(arithmetic_types)
         self.stype = self.rhs.stype
 
+    @AST.codegen_decorator
     def codegen(self):
         self.rhs.codegen()
 
@@ -1101,11 +1159,13 @@ class LogicUnOp(RValue):
         self.op = op
         self.rhs = rhs
 
+    @AST.sem_decorator
     def sem(self):
         self.rhs.sem()
         self.rhs.type_check((ComposerType.T_NO_COMP, BaseType.T_BOOL))
         self.stype = self.rhs.stype
 
+    @AST.codegen_decorator
     def codegen(self):
         self.rhs.codegen()
         self.cvalue = self.builder.not_(self.rhs.cvalue)
@@ -1122,6 +1182,7 @@ class ArOp(RValue):
         self.lhs = lhs
         self.rhs = rhs
 
+    @AST.sem_decorator
     def sem(self):
         self.lhs.sem()
         self.rhs.sem()
@@ -1143,6 +1204,7 @@ class ArOp(RValue):
 
         self.stype = int_type
 
+    @AST.codegen_decorator
     def codegen(self):
         self.lhs.codegen()
         self.rhs.codegen()
@@ -1195,6 +1257,7 @@ class CompOp(RValue):
         self.lhs = lhs
         self.rhs = rhs
 
+    @AST.sem_decorator
     def sem(self):
         self.lhs.sem()
         self.rhs.sem()
@@ -1213,6 +1276,7 @@ class CompOp(RValue):
 
         self.stype = (ComposerType.T_NO_COMP, BaseType.T_BOOL)
 
+    @AST.codegen_decorator
     def codegen(self):
         self.lhs.codegen()
         self.rhs.codegen()
@@ -1264,6 +1328,7 @@ class LogicOp(RValue):
         self.lhs = lhs
         self.rhs = rhs
 
+    @AST.sem_decorator
     def sem(self):
         self.lhs.sem()
         self.rhs.sem()
@@ -1274,6 +1339,7 @@ class LogicOp(RValue):
 
         self.stype = bool_type
 
+    @AST.codegen_decorator
     def codegen(self):
         self.lhs.codegen()
         self.rhs.codegen()
@@ -1297,10 +1363,12 @@ class AddressOf(RValue):
         super(AddressOf, self).__init__(builder, module, symbol_table, lineno)
         self.lvalue = lvalue
 
+    @AST.sem_decorator
     def sem(self):
         self.lvalue.sem()
         self.stype = (ComposerType.T_PTR, self.lvalue.stype)
 
+    @AST.codegen_decorator
     def codegen(self):
         self.lvalue.codegen()
         self.cvalue = self.symbol_table.lookup(self.lvalue.id_).cvalue
@@ -1325,6 +1393,7 @@ class NameLValue(LValue):
         super(NameLValue, self).__init__(builder, module, symbol_table, lineno)
         self.id_ = id_
 
+    @AST.sem_decorator
     def sem(self):
         result = self.symbol_table.lookup(self.id_)
         self.stype = result.stype
@@ -1332,6 +1401,7 @@ class NameLValue(LValue):
             msg = 'Uniitialized lvalue: {}'.format(self.id_)
             self.raise_warning_helper(msg)
 
+    @AST.codegen_decorator
     def codegen(self):
         self.gep = self.symbol_table.lookup(self.id_).cvalue
         # OPTIMIZE remove redundant loads
@@ -1358,10 +1428,12 @@ class Result(NameLValue):
     def __init__(self, builder, module, symbol_table, lineno):
         super(Result, self).__init__('result', builder, module, symbol_table, lineno)
 
+    @AST.sem_decorator
     def sem(self):
        result = self.symbol_table.lookup('result')
        self.stype = result.stype
 
+    @AST.codegen_decorator
     def codegen(self):
        self.gep = self.symbol_table.lookup('result').cvalue
 
@@ -1378,12 +1450,14 @@ class StringLiteral(LValue):
         self.literal = literal + '\0'
         self.length = len(self.literal)
 
+    @AST.sem_decorator
     def sem(self):
         self.stype = (
             ComposerType.T_CONST_ARRAY,
             (ComposerType.T_NO_COMP,
              BaseType.T_CHAR))
 
+    @AST.codegen_decorator
     def codegen(self):
         self.cvalue = ir.Constant(
             ir.ArrayType(
@@ -1407,6 +1481,7 @@ class Deref(LValue):
 
         self.expr = expr
 
+    @AST.sem_decorator
     def sem(self):
         self.expr.sem()
         if self.expr.stype[0] != ComposerType.T_PTR:
@@ -1418,6 +1493,7 @@ class Deref(LValue):
 
         self.stype = self.expr.stype[1]
 
+    @AST.codegen_decorator
     def codegen(self):
         self.expr.codegen()
         self.gep = self.expr.cvalue
@@ -1434,6 +1510,7 @@ class SetExpression(LValue):
         self.lvalue = lvalue
         self.expr = expr
 
+    @AST.sem_decorator
     def sem(self):
         self.expr.sem()
         self.lvalue.sem()
@@ -1453,6 +1530,7 @@ class SetExpression(LValue):
             msg = 'Invalid set expression {} := {}'.format(self.lvalue.stype, self.expr.stype)
             self.raise_exception_helper(msg, PCLSemError)
 
+    @AST.codegen_decorator
     def codegen(self):
         self.expr.codegen()
         self.lvalue.codegen()
@@ -1460,7 +1538,11 @@ class SetExpression(LValue):
         if self.expr.stype[1] == BaseType.T_NIL:
             self.lvalue.set_nil()
         elif self.lvalue.gep:
-            self.builder.store(self.expr.cvalue, self.lvalue.gep)
+            if self.lvalue.stype == (ComposerType.T_NO_COMP, BaseType.T_REAL) and self.expr.stype == (ComposerType.T_NO_COMP, BaseType.T_INT):
+                expr_cvalue = self.builder.sitofp(self.expr.cvalue, LLVMTypes.T_REAL)
+            else:
+                expr_cvalue = self.expr.cvalue
+            self.builder.store(expr_cvalue, self.lvalue.gep)
 
 
 class LBrack(LValue):
@@ -1473,12 +1555,14 @@ class LBrack(LValue):
         self.lvalue = lvalue
         self.expr = expr
 
+    @AST.sem_decorator
     def sem(self):
         self.expr.sem()
         self.expr.type_check((ComposerType.T_NO_COMP, BaseType.T_INT))
         self.lvalue.sem()
         self.stype = self.lvalue.stype[1]
 
+    @AST.codegen_decorator
     def codegen(self):
         self.expr.codegen()
         self.lvalue.codegen()
