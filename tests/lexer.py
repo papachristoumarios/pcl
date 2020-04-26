@@ -6,8 +6,10 @@ import os
 
 lexer = Lexer()
 
+
 def tokenize(s):
     return [x.type for x in lexer.tokenize(s)]
+
 
 def test_hello():
     s = '''
@@ -16,7 +18,18 @@ def test_hello():
         writeString("hello")
         end.
         '''
-    assert (tokenize(s) == ['PROGRAM', 'NAME', 'SEMICOLON', 'BEGIN', 'NAME', 'LPAREN', 'STRING', 'RPAREN', 'END', 'COLON'])
+    assert (
+        tokenize(s) == [
+            'PROGRAM',
+            'NAME',
+            'SEMICOLON',
+            'BEGIN',
+            'NAME',
+            'LPAREN',
+            'STRING',
+            'RPAREN',
+            'END',
+            'COLON'])
 
 
 def test_collatz():
@@ -51,6 +64,7 @@ def test_collatz():
                            'DIV', 'INT_CONS', 'ELSE', 'NAME', 'SET',
                            'INT_CONS', 'TIMES', 'NAME', 'PLUS', 'INT_CONS',
                            'SEMICOLON', 'END', 'SEMICOLON', 'END', 'COLON'])
+
 
 def test_reverse():
     s = '''
@@ -120,6 +134,7 @@ def test_reals():
                            'NAME', 'SET', 'REAL_CONS', 'SEMICOLON', 'END',
                            'COLON']
 
+
 def test_vars():
     s = '''
     program var1;
@@ -129,10 +144,30 @@ def test_vars():
       y := y + 1;
     end.
     '''
-    assert tokenize(s) == ['PROGRAM', 'NAME', 'SEMICOLON', 'VAR', 'NAME', 'DCOLON',
-                            'INTEGER', 'SEMICOLON', 'BEGIN', 'NAME', 'SET', 'NAME', 'PLUS',
-                            'INT_CONS', 'SEMICOLON', 'NAME', 'SET', 'NAME', 'PLUS',
-                            'INT_CONS', 'SEMICOLON', 'END', 'COLON']
+    assert tokenize(s) == [
+        'PROGRAM',
+        'NAME',
+        'SEMICOLON',
+        'VAR',
+        'NAME',
+        'DCOLON',
+        'INTEGER',
+        'SEMICOLON',
+        'BEGIN',
+        'NAME',
+        'SET',
+        'NAME',
+        'PLUS',
+        'INT_CONS',
+        'SEMICOLON',
+        'NAME',
+        'SET',
+        'NAME',
+        'PLUS',
+        'INT_CONS',
+        'SEMICOLON',
+        'END',
+        'COLON']
 
 
 if __name__ == '__main__':

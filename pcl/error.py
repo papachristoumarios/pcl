@@ -1,8 +1,10 @@
 class PCLError(Exception):
     pass
 
+
 class PCLWarning(Warning):
     pass
+
 
 class PCLCError(PCLError):
     pass
@@ -18,6 +20,7 @@ class PCLParserError(PCLError):
 
 class PCLSemError(PCLError):
     pass
+
 
 class PCLSymbolTableError(PCLSemError):
     pass

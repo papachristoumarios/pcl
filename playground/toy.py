@@ -3,6 +3,7 @@ from ctypes import CFUNCTYPE, c_double
 from llvmlite import ir, binding
 import os
 
+
 class ToyLexer(Lexer):
     tokens = {NUMBER, PLUS, MINUS, TIMES, DIVIDE, COMMENT, PRINT}
 
@@ -28,8 +29,12 @@ class ToyLexer(Lexer):
         self.lineno += t.value.count('\n')
 
     def error(self, t):
-        print('Illegal character {} at line {}'.format(t.value[0], self.lineno))
+        print(
+            'Illegal character {} at line {}'.format(
+                t.value[0],
+                self.lineno))
         self.index += 1
+
 
 class Constant:
 
@@ -48,6 +53,7 @@ class Constant:
     def codegen(self):
         i = ir.Constant(ir.IntType(8), self.value)
         return i
+
 
 class BinOp:
 
@@ -68,7 +74,6 @@ class BinOp:
         if self.op == '/':
             return self.lhs.eval() // self.rhs.eval()
 
-
     def codegen(self):
         if self.op == '+':
             i = self.builder.add(self.lhs.codegen(), self.rhs.codegen())
@@ -80,6 +85,7 @@ class BinOp:
             i = self.builder.udiv(self.lhs.codegen(), self.rhs.codegen())
 
         return i
+
 
 class Print:
 
@@ -101,13 +107,16 @@ class Print:
         fmt = "%i\n\0"
         c_fmt = ir.Constant(ir.ArrayType(ir.IntType(8), len(fmt)),
                             bytearray(fmt.encode("utf8")))
-        global_fmt = ir.GlobalVariable(self.module, c_fmt.type, name="fstr{}".format(self.printf_counter))
+        global_fmt = ir.GlobalVariable(
+            self.module, c_fmt.type, name="fstr{}".format(
+                self.printf_counter))
         global_fmt.linkage = 'internal'
         global_fmt.global_constant = True
         global_fmt.initializer = c_fmt
         fmt_arg = self.builder.bitcast(global_fmt, voidptr_ty)
         # Call Print Function
         return self.builder.call(self.printf, [fmt_arg, value])
+
 
 class Program:
 
@@ -121,6 +130,7 @@ class Program:
     def codegen(self):
         for stmt in self.stmt_list:
             stmt.codegen()
+
 
 class ToyParser(Parser):
 
@@ -163,13 +173,19 @@ class ToyParser(Parser):
     @_('PRINT expr')
     def stmt(self, p):
         self.printf_counter += 1
-        return Print(p.expr, self.builder, self.module, self.printf, self.printf_counter)
+        return Print(
+            p.expr,
+            self.builder,
+            self.module,
+            self.printf,
+            self.printf_counter)
 
     @_('"(" expr ")"')
     def expr(self, p):
         return p.expr
 
-    @_('expr PLUS expr', 'expr MINUS expr', 'expr TIMES expr', 'expr DIVIDE expr')
+    @_('expr PLUS expr', 'expr MINUS expr',
+       'expr TIMES expr', 'expr DIVIDE expr')
     def expr(self, p):
         return BinOp(p[1], p.expr0, p.expr1, self.builder, self.module)
 
@@ -238,7 +254,6 @@ class ToyCodeGen:
         self.module_pass_manager = binding.ModulePassManager()
         self.module_pass_manager.run(self.module_ref)
 
-
     def create_ir(self):
         self._compile_ir()
         self._optimize_ir()
@@ -256,7 +271,6 @@ class ToyCodeGen:
         os.system('gcc {} -o {}'.format(obj_filename, output_filename))
 
 
-
 if __name__ == '__main__':
     s = '''print 2
            print 3
@@ -266,7 +280,10 @@ if __name__ == '__main__':
 
     toy_codegen = ToyCodeGen()
 
-    toy_parser = ToyParser(toy_codegen.module, toy_codegen.builder, toy_codegen.printf)
+    toy_parser = ToyParser(
+        toy_codegen.module,
+        toy_codegen.builder,
+        toy_codegen.printf)
 
     # Returns root of AST
     parse_result = toy_parser.parse(lex_result)

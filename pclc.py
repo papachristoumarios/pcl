@@ -28,8 +28,16 @@ def get_argparser():
         default='',
         type=str,
         help='Input filename')
-    argparser.add_argument('-O', default=0, type=int, help='Optimization level')
-    argparser.add_argument('--pipeline', nargs='+', default=['lex', 'parse', 'sem', 'codegen'])
+    argparser.add_argument('-O', default=0, type=int,
+                           help='Optimization level')
+    argparser.add_argument(
+        '--pipeline',
+        nargs='+',
+        default=[
+            'lex',
+            'parse',
+            'sem',
+            'codegen'])
     argparser.add_argument('-W', action='store_true', help='Enable warnings')
     argparser.add_argument(
         '-f',
@@ -45,6 +53,7 @@ def get_argparser():
         help='Output version'
     )
     return argparser
+
 
 class PCLCDriver:
 
@@ -77,6 +86,7 @@ class PCLCDriver:
     def print_module(self):
         self.parsed.print_module()
 
+
 if __name__ == '__main__':
     argparser = get_argparser()
     args = argparser.parse_args()
@@ -103,11 +113,11 @@ if __name__ == '__main__':
     driver = PCLCDriver(program)
 
     pipeline_funcs = {
-        'lex' : driver.lex,
-        'parse' : driver.parse,
-        'sem' : driver.sem,
-        'pprint' : driver.pprint,
-        'codegen' : driver.codegen,
+        'lex': driver.lex,
+        'parse': driver.parse,
+        'sem': driver.sem,
+        'pprint': driver.pprint,
+        'codegen': driver.codegen,
     }
 
     for stage in args.pipeline:

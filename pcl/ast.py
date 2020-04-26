@@ -43,12 +43,14 @@ class AST(ABC):
 
     def raise_exception_helper(self, msg, exception=PCLSemError):
         ''' Helper function to raise Exceptions including line numbers '''
-        msg_new = '{} at line {}: {}'.format(self.__class__.__name__, self.lineno, msg)
+        msg_new = '{} at line {}: {}'.format(
+            self.__class__.__name__, self.lineno, msg)
         raise exception(msg_new)
 
     def raise_warning_helper(self, msg):
         ''' Helper function to raise warnings including line numbers '''
-        msg_new = 'WARNING {} at line {}: {}\n'.format(self.__class__.__name__, self.lineno, msg)
+        msg_new = 'WARNING {} at line {}: {}\n'.format(
+            self.__class__.__name__, self.lineno, msg)
         warnings.warn(msg_new, PCLWarning)
 
     @abstractmethod
@@ -61,6 +63,7 @@ class AST(ABC):
     @staticmethod
     def sem_decorator(sem_fn):
         ''' Decorator that allows memoization on semantic analysis '''
+
         def wrapper(self):
             if self.stype is None:
                 sem_fn(self)
@@ -72,7 +75,7 @@ class AST(ABC):
         msg = 'codegen method not implemented for {}'.format(
             self.__class__.__name__)
         raise NotImplementedError(msg)
-        
+
     def pipeline(self, *stages):
         for stage in stages:
             getattr(self, stage)()
@@ -129,6 +132,7 @@ class Program(AST):
     '''
         Main program AST node. Contains the body of the program
     '''
+
     def __init__(self, id_, body, builder, module, symbol_table, lineno):
         super(Program, self).__init__(builder, module, symbol_table, lineno)
         self.id_ = id_
@@ -148,7 +152,6 @@ class Program(AST):
 
         # Close main scope
         self.symbol_table.close_scope()
-
 
     def codegen(self):
         '''
@@ -181,7 +184,6 @@ class Body(AST):
         # Run sem to block
         self.block.sem()
 
-
     def codegen(self):
         # Run codegen to locals
         for local in self.locals_:
@@ -197,7 +199,13 @@ class Local(AST):
 
 class LocalHeader(Local):
     def __init__(self, header, body, builder, module, symbol_table, lineno):
-        super(LocalHeader, self).__init__(builder, module, symbol_table, lineno)
+        super(
+            LocalHeader,
+            self).__init__(
+            builder,
+            module,
+            symbol_table,
+            lineno)
         self.header = header
         self.body = body
 
@@ -249,7 +257,6 @@ class LocalHeader(Local):
         # Close function scope
         self.symbol_table.close_scope()
 
-
     def codegen(self):
 
         # Infer function type (signature)
@@ -276,7 +283,8 @@ class LocalHeader(Local):
             header_return_cvalue, formal_types_cvalues, var_arg=False)
 
         try:
-            header_entry = self.symbol_table.lookup('forward_' + self.header.id_)
+            header_entry = self.symbol_table.lookup(
+                'forward_' + self.header.id_)
             header_cvalue = header_entry.cvalue
         except PCLSymbolTableError:
             header_cvalue = ir.Function(
@@ -375,7 +383,6 @@ class VarList(Local):
         for var in self.vars_:
             var.sem()
 
-
     def codegen(self):
         for var in self.vars_:
             var.codegen()
@@ -397,7 +404,6 @@ class Var(Local):
                 name_type=NameType.N_VAR)
             self.symbol_table.insert(id_, var_entry)
 
-
     def codegen(self):
         self.type_.codegen()
         for id_ in self.ids:
@@ -407,7 +413,8 @@ class Var(Local):
             # Should not be used by the programmer
             # Naming convention is by definition unique
             global_id_name = '{}_{}'.format(id_, self.symbol_table.auto(id_))
-            global_id_cvalue = ir.GlobalVariable(self.module, self.type_.cvalue, name=global_id_name)
+            global_id_cvalue = ir.GlobalVariable(
+                self.module, self.type_.cvalue, name=global_id_name)
 
             # Set initializer to zeroinitializer ir.Constant(typ, None)
             global_id_cvalue.initializer = ir.Constant(self.type_.cvalue, None)
@@ -419,6 +426,7 @@ class Var(Local):
 
             # Register global symbol to symbol table
             self.symbol_table.insert(id_, var_entry)
+
 
 class Label(Local):
     def __init__(self, ids, builder, module, symbol_table, lineno):
@@ -435,7 +443,6 @@ class Label(Local):
                     BaseType.T_LABEL),
                 name_type=NameType.N_LABEL)
             self.symbol_table.insert(id_, label_entry)
-
 
     def codegen(self):
         pass
@@ -468,7 +475,6 @@ class Forward(Local):
                     by_reference=formal.by_reference)
                 self.symbol_table.insert_formal(
                     'forward_' + self.header.id_, formal_id, formal_entry)
-
 
     def codegen(self):
         # Infer function type (signature)
@@ -515,7 +521,6 @@ class Forward(Local):
         self.symbol_table.insert('forward_' + self.header.id_, header_entry)
 
 
-
 class Header(AST):
     def __init__(
             self,
@@ -546,7 +551,6 @@ class Header(AST):
                 name_type=NameType.N_VAR)
             self.symbol_table.insert('result', result_entry)
 
-
     def codegen(self):
         if self.func_type:
             self.func_type.codegen()
@@ -576,15 +580,18 @@ class Formal(AST):
     @AST.sem_decorator
     def sem(self):
         self.type_.sem()
-        if self.type_.stype[0] in [ComposerType.T_CONST_ARRAY, ComposerType.T_VAR_ARRAY] and (not self.by_reference):
+        if self.type_.stype[0] in [
+                ComposerType.T_CONST_ARRAY,
+                ComposerType.T_VAR_ARRAY] and (
+                not self.by_reference):
             msg = 'Arrays are not allowed to pass by value'
             self.raise_exception_helper(msg, PCLSemError)
 
         self.stype = self.type_.stype
 
-
     def codegen(self):
         pass
+
 
 class Type(AST):
 
@@ -595,7 +602,6 @@ class Type(AST):
     @AST.sem_decorator
     def sem(self):
         self.stype = (ComposerType.T_NO_COMP, BaseType(self.type_))
-
 
     def codegen(self):
         self.cvalue = LLVMTypes.mapping[self.type_]
@@ -608,7 +614,14 @@ class PointerType(Type):
     '''
 
     def __init__(self, type_, builder, module, symbol_table, lineno):
-        super(PointerType, self).__init__(type_, builder, module, symbol_table, lineno)
+        super(
+            PointerType,
+            self).__init__(
+            type_,
+            builder,
+            module,
+            symbol_table,
+            lineno)
         self.type_ = type_
 
     @AST.sem_decorator
@@ -616,7 +629,6 @@ class PointerType(Type):
         self.type_.sem()
         base_type = self.type_.stype
         self.stype = (ComposerType.T_PTR, base_type)
-
 
     def codegen(self):
         self.type_.codegen()
@@ -626,7 +638,14 @@ class PointerType(Type):
 class ArrayType(Type):
 
     def __init__(self, length, type_, builder, module, symbol_table, lineno):
-        super(ArrayType, self).__init__(type_, builder, module, symbol_table, lineno)
+        super(
+            ArrayType,
+            self).__init__(
+            type_,
+            builder,
+            module,
+            symbol_table,
+            lineno)
         self.length = int(length)
 
     @AST.sem_decorator
@@ -639,7 +658,6 @@ class ArrayType(Type):
         else:
             msg = 'Negative length specified'
             self.raise_exception_helper(msg, PCLSemError)
-
 
     def codegen(self):
         self.type_.codegen()
@@ -658,7 +676,6 @@ class Statement(AST):
         if self.name:
             self.symbol_table.lookup(self.name)
             self.stmt.sem()
-
 
     def codegen(self):
         if self.name:
@@ -699,7 +716,6 @@ class Block(Statement):
         for stmt in self.stmt_list:
             stmt.sem()
 
-
     def codegen(self):
         for stmt in self.stmt_list:
             stmt.codegen()
@@ -721,7 +737,7 @@ class Call(Statement):
             call_entry = self.symbol_table.lookup(self.id_)
         except PCLSymbolTableError:
             call_entry = self.symbol_table.lookup('forward_' + self.id_)
-        except:
+        except BaseException:
             msg = 'Name {} not found'.format(self.id_)
             self.raise_exception_helper(msg, PCLSemError)
 
@@ -741,9 +757,9 @@ class Call(Statement):
                 elif formal.stype[0] == ComposerType.T_VAR_ARRAY and expr.stype[0] == ComposerType.T_CONST_ARRAY:
                     continue
                 else:
-                    msg = 'Incompatible assignment type: {}'.format(formal_name)
+                    msg = 'Incompatible assignment type: {}'.format(
+                        formal_name)
                     self.raise_exception_helper(msg, PCLSemError)
-
 
     def codegen(self):
         # WIP
@@ -752,15 +768,16 @@ class Call(Statement):
         try:
             call_entry_cvalue = self.symbol_table.lookup(self.id_).cvalue
         except PCLSymbolTableError:
-            call_entry_cvalue = self.symbol_table.lookup('forward_' + self.id_).cvalue
-        except:
+            call_entry_cvalue = self.symbol_table.lookup(
+                'forward_' + self.id_).cvalue
+        except BaseException:
             # Should never be reached
             msg = 'Unknown name: {}'.format(self.id_)
             self.raise_exception_helper(msg, PCLSemError)
 
-
         formals = self.symbol_table.formal_generator(self.id_)
-        for expr, formal_type, (_, formal) in zip(self.exprs, call_entry_cvalue.args, formals):
+        for expr, formal_type, (_, formal) in zip(
+                self.exprs, call_entry_cvalue.args, formals):
             expr.codegen()
             if formal.by_reference:
                 if expr.ptr:
@@ -786,7 +803,15 @@ class If(Statement):
         If statement.
     '''
 
-    def __init__(self, expr, stmt, else_stmt, builder, module, symbol_table, lineno):
+    def __init__(
+            self,
+            expr,
+            stmt,
+            else_stmt,
+            builder,
+            module,
+            symbol_table,
+            lineno):
         super(If, self).__init__(builder, module, symbol_table, lineno)
         self.expr = expr
         self.stmt = stmt
@@ -800,7 +825,6 @@ class If(Statement):
         self.stmt.sem()
         if self.else_stmt:
             self.else_stmt.sem()
-
 
     def codegen(self):
         self.expr.codegen()
@@ -832,7 +856,6 @@ class While(Statement):
         self.expr.type_check((ComposerType.T_NO_COMP, BaseType.T_BOOL))
         self.stmt.sem()
 
-
     def codegen(self):
         w_body_block = self.builder.append_basic_block()
         w_after_block = self.builder.append_basic_block()
@@ -858,7 +881,6 @@ class Goto(Statement):
     def sem(self):
         self.symbol_table.lookup(self.id_, last_scope=True)
 
-
     def codegen(self):
         # TODO fix non terminating block
         helper_block = self.builder.append_basic_block()
@@ -868,6 +890,7 @@ class Goto(Statement):
         self.builder.branch(goto_block)
         next_block = self.builder.append_basic_block()
         self.builder.position_at_start(next_block)
+
 
 class Return(Statement):
     '''
@@ -883,7 +906,6 @@ class Return(Statement):
                 self.raise_warning_helper(msg)
         except PCLSymbolTableError:
             pass
-
 
     def codegen(self):
         return_block = self.builder.append_basic_block()
@@ -910,7 +932,6 @@ class Empty(Statement):
     def sem(self):
         pass
 
-
     def codegen(self):
         pass
 
@@ -930,7 +951,8 @@ class New(Statement):
         self.lvalue.sem()
         if self.expr:
             if self.lvalue.stype[0] != ComposerType.T_PTR or self.lvalue.stype[1][0] != ComposerType.T_VAR_ARRAY:
-                msg = 'Cannot create new instance of {}'.format(self.lvalue.stype)
+                msg = 'Cannot create new instance of {}'.format(
+                    self.lvalue.stype)
                 self.raise_exception_helper(msg, PCLSemError)
 
             self.expr.sem()
@@ -944,12 +966,12 @@ class New(Statement):
         else:
             if self.lvalue.stype[0] != ComposerType.T_PTR or not is_composite(
                     self.lvalue.stype[1]):
-                msg = 'Cannot create new instance of {}'.format(self.lvalue.stype)
+                msg = 'Cannot create new instance of {}'.format(
+                    self.lvalue.stype)
                 self.raise_exception_helper(msg, PCLSemError)
 
             # ^t -> t
             self.stype = self.lvalue.stype[1]
-
 
     def codegen(self):
         self.lvalue.codegen()
@@ -970,7 +992,14 @@ class Dispose(Statement):
         Dispose statement.
     '''
 
-    def __init__(self, lvalue, brackets, builder, module, symbol_table, lineno):
+    def __init__(
+            self,
+            lvalue,
+            brackets,
+            builder,
+            module,
+            symbol_table,
+            lineno):
         super(Dispose, self).__init__(builder, module, symbol_table, lineno)
         self.lvalue = lvalue
         self.brackets = brackets
@@ -991,10 +1020,10 @@ class Dispose(Statement):
 
         self.stype = (ComposerType.T_NO_COMP, BaseType.T_NIL)
 
-
     def codegen(self):
         self.lvalue.codegen()
         self.lvalue.set_nil()
+
 
 class Expr(AST):
     '''
@@ -1029,13 +1058,18 @@ class IntegerConst(RValue):
     '''
 
     def __init__(self, value, builder, module, symbol_table, lineno):
-        super(IntegerConst, self).__init__(builder, module, symbol_table, lineno)
+        super(
+            IntegerConst,
+            self).__init__(
+            builder,
+            module,
+            symbol_table,
+            lineno)
         self.value = int(value)
 
     @AST.sem_decorator
     def sem(self):
         self.stype = (ComposerType.T_NO_COMP, BaseType.T_INT)
-
 
     def codegen(self):
         self.cvalue = ir.Constant(LLVMTypes.T_INT, self.value)
@@ -1054,7 +1088,6 @@ class RealConst(RValue):
     def sem(self):
         self.stype = (ComposerType.T_NO_COMP, BaseType.T_REAL)
 
-
     def codegen(self):
         self.cvalue = ir.Constant(LLVMTypes.T_REAL, self.value)
 
@@ -1072,7 +1105,6 @@ class CharConst(RValue):
     def sem(self):
         self.stype = (ComposerType.T_NO_COMP, BaseType.T_CHAR)
 
-
     def codegen(self):
         self.cvalue = ir.Constant(LLVMTypes.T_CHAR, self.value)
 
@@ -1089,7 +1121,6 @@ class BoolConst(RValue):
     @AST.sem_decorator
     def sem(self):
         self.stype = (ComposerType.T_NO_COMP, BaseType.T_BOOL)
-
 
     def codegen(self):
         self.cvalue = ir.Constant(LLVMTypes.T_BOOL, self.value)
@@ -1123,9 +1154,9 @@ class Nil(RValue):
     def sem(self):
         self.stype = (ComposerType.T_NO_COMP, BaseType.T_NIL)
 
-
     def codegen(self):
         pass
+
 
 class ArUnOp(RValue):
     '''
@@ -1142,7 +1173,6 @@ class ArUnOp(RValue):
         self.rhs.sem()
         self.rhs.type_check(arithmetic_types)
         self.stype = self.rhs.stype
-
 
     def codegen(self):
         self.rhs.codegen()
@@ -1172,7 +1202,6 @@ class LogicUnOp(RValue):
         self.rhs.sem()
         self.rhs.type_check((ComposerType.T_NO_COMP, BaseType.T_BOOL))
         self.stype = self.rhs.stype
-
 
     def codegen(self):
         self.rhs.codegen()
@@ -1211,7 +1240,6 @@ class ArOp(RValue):
             return
 
         self.stype = int_type
-
 
     def codegen(self):
         self.lhs.codegen()
@@ -1284,7 +1312,6 @@ class CompOp(RValue):
 
         self.stype = (ComposerType.T_NO_COMP, BaseType.T_BOOL)
 
-
     def codegen(self):
         self.lhs.codegen()
         self.rhs.codegen()
@@ -1296,7 +1323,6 @@ class CompOp(RValue):
         boolean = (
             self.lhs.stype == (ComposerType.T_NO_COMP, BaseType.T_BOOL)) and (
             self.rhs.stype == (ComposerType.T_NO_COMP, BaseType.T_BOOL))
-
 
         cmp_op = LLVMOperators.get_op(self.op)
 
@@ -1322,7 +1348,8 @@ class CompOp(RValue):
         elif self.op in ['=', '<>']:
                 # lhs_cvalue = self.builder.geptoint(self.lhs.cvalue, LLVMTypes.T_INT)
                 # rhs_cvalue = self.builder.geptoint(self.rhs.cvalue, LLVMTypes.T_INT)
-                self.cvalue = self.builder.icmp_signed(cmp_op, self.lhs.cvalue, self.rhs.cvalue)
+            self.cvalue = self.builder.icmp_signed(
+                cmp_op, self.lhs.cvalue, self.rhs.cvalue)
 
 
 class LogicOp(RValue):
@@ -1346,7 +1373,6 @@ class LogicOp(RValue):
         self.rhs.type_check(bool_type)
 
         self.stype = bool_type
-
 
     def codegen(self):
         self.lhs.codegen()
@@ -1376,10 +1402,10 @@ class AddressOf(RValue):
         self.lvalue.sem()
         self.stype = (ComposerType.T_PTR, self.lvalue.stype)
 
-
     def codegen(self):
         self.lvalue.codegen()
         self.cvalue = self.symbol_table.lookup(self.lvalue.id_).cvalue
+
 
 class LValue(Expr):
     '''
@@ -1409,7 +1435,6 @@ class NameLValue(LValue):
             msg = 'Uniitialized lvalue: {}'.format(self.id_)
             self.raise_warning_helper(msg)
 
-
     def codegen(self):
         self.ptr = self.symbol_table.lookup(self.id_).cvalue
         # OPTIMIZE remove redundant loads
@@ -1417,15 +1442,17 @@ class NameLValue(LValue):
             self.cvalue = self.builder.load(self.ptr)
 
     def set_nil(self):
-        # Result is a pointer to our type e.g. for integer variable i32 it is *i32
+        # Result is a pointer to our type e.g. for integer variable i32 it is
+        # *i32
         result = self.symbol_table.lookup(self.id_).cvalue
 
         # Convert 0 to the pointee of the pointer (the actual type)
-        nil = self.builder.inttoptr(LLVMConstants.ZERO_INT, result.type.pointee)
+        nil = self.builder.inttoptr(
+            LLVMConstants.ZERO_INT,
+            result.type.pointee)
 
         # Store value to pointee
         self.builder.store(nil, result)
-
 
 
 class Result(NameLValue):
@@ -1434,19 +1461,26 @@ class Result(NameLValue):
     '''
 
     def __init__(self, builder, module, symbol_table, lineno):
-        super(Result, self).__init__('result', builder, module, symbol_table, lineno)
+        super(
+            Result,
+            self).__init__(
+            'result',
+            builder,
+            module,
+            symbol_table,
+            lineno)
 
     @AST.sem_decorator
     def sem(self):
-       result = self.symbol_table.lookup('result')
-       self.stype = result.stype
-
+        result = self.symbol_table.lookup('result')
+        self.stype = result.stype
 
     def codegen(self):
-       self.ptr = self.symbol_table.lookup('result').cvalue
+        self.ptr = self.symbol_table.lookup('result').cvalue
 
-       if self.load:
-           self.cvalue = self.builder.load(self.ptr)
+        if self.load:
+            self.cvalue = self.builder.load(self.ptr)
+
 
 class StringLiteral(LValue):
     '''
@@ -1454,7 +1488,13 @@ class StringLiteral(LValue):
     '''
 
     def __init__(self, literal, builder, module, symbol_table, lineno):
-        super(StringLiteral, self).__init__(builder, module, symbol_table, lineno)
+        super(
+            StringLiteral,
+            self).__init__(
+            builder,
+            module,
+            symbol_table,
+            lineno)
         self.literal = literal + '\0'
         self.length = len(self.literal)
 
@@ -1464,7 +1504,6 @@ class StringLiteral(LValue):
             ComposerType.T_CONST_ARRAY,
             (ComposerType.T_NO_COMP,
              BaseType.T_CHAR))
-
 
     def codegen(self):
         self.cvalue = ir.Constant(
@@ -1501,7 +1540,6 @@ class Deref(LValue):
 
         self.stype = self.expr.stype[1]
 
-
     def codegen(self):
         self.expr.codegen()
         self.ptr = self.expr.cvalue
@@ -1514,7 +1552,13 @@ class SetExpression(LValue):
     '''
 
     def __init__(self, lvalue, expr, builder, module, symbol_table, lineno):
-        super(SetExpression, self).__init__(builder, module, symbol_table, lineno)
+        super(
+            SetExpression,
+            self).__init__(
+            builder,
+            module,
+            symbol_table,
+            lineno)
         self.lvalue = lvalue
         self.expr = expr
 
@@ -1535,9 +1579,9 @@ class SetExpression(LValue):
         elif self.expr.stype == (ComposerType.T_CONST_ARRAY, (ComposerType.T_NO_COMP, BaseType.T_CHAR)):
             return
         else:
-            msg = 'Invalid set expression {} := {}'.format(self.lvalue.stype, self.expr.stype)
+            msg = 'Invalid set expression {} := {}'.format(
+                self.lvalue.stype, self.expr.stype)
             self.raise_exception_helper(msg, PCLSemError)
-
 
     def codegen(self):
         self.expr.codegen()
@@ -1546,8 +1590,13 @@ class SetExpression(LValue):
         if self.expr.stype[1] == BaseType.T_NIL:
             self.lvalue.set_nil()
         elif self.lvalue.ptr:
-            if self.lvalue.stype == (ComposerType.T_NO_COMP, BaseType.T_REAL) and self.expr.stype == (ComposerType.T_NO_COMP, BaseType.T_INT):
-                expr_cvalue = self.builder.sitofp(self.expr.cvalue, LLVMTypes.T_REAL)
+            if self.lvalue.stype == (
+                    ComposerType.T_NO_COMP,
+                    BaseType.T_REAL) and self.expr.stype == (
+                    ComposerType.T_NO_COMP,
+                    BaseType.T_INT):
+                expr_cvalue = self.builder.sitofp(
+                    self.expr.cvalue, LLVMTypes.T_REAL)
             else:
                 expr_cvalue = self.expr.cvalue
             self.builder.store(expr_cvalue, self.lvalue.ptr)
@@ -1570,11 +1619,12 @@ class LBrack(LValue):
         self.lvalue.sem()
         self.stype = self.lvalue.stype[1]
 
-
     def codegen(self):
         self.expr.codegen()
         self.lvalue.codegen()
 
-        self.ptr = self.builder.gep(self.lvalue.ptr, [LLVMConstants.ZERO_INT, self.expr.cvalue])
+        self.ptr = self.builder.gep(
+            self.lvalue.ptr, [
+                LLVMConstants.ZERO_INT, self.expr.cvalue])
 
         self.cvalue = self.builder.load(self.ptr)

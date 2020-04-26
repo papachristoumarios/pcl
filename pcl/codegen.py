@@ -11,6 +11,7 @@ class LLVMTypeSize:
     T_PTR = 2
     T_INT = 4
 
+
 class LLVMTypes:
     T_INT = ir.IntType(8 * LLVMTypeSize.T_INT)
 
@@ -85,7 +86,6 @@ class PCLCodegen:
         # Optimize module
         self.optimize_module(level=level)
 
-
     def optimize_module(self, level=2):
         if level == 0:
             return
@@ -117,5 +117,7 @@ class PCLCodegen:
             obj_filename = filename + '.o'
             output_filename = filename + '.out'
 
-            os.system('llc -filetype=obj {} -o {}'.format(llvm_filename, obj_filename))
-            os.system('gcc {} -Wall -lbuiltins -lm -o {}'.format(obj_filename, output_filename))
+            os.system(
+                'llc -filetype=obj {} -o {}'.format(llvm_filename, obj_filename))
+            os.system(
+                'gcc {} -Wall -lbuiltins -lm -o {}'.format(obj_filename, output_filename))

@@ -3,6 +3,7 @@ from ctypes import CFUNCTYPE, c_double
 from llvmlite import ir, binding
 import os
 
+
 class MinibasicLexer(Lexer):
     tokens = {
         PLUS,
@@ -51,17 +52,18 @@ class MinibasicLexer(Lexer):
     ID = r'[a-z]+'
     CONST = r'\d+'
 
-
     ignore_newline = '\n+'
-
-
 
     def ignore_newline(self, t):
         self.lineno += t.value.count('\n')
 
     def error(self, t):
-        print('Illegal character {} at line {}'.format(t.value[0], self.lineno))
+        print(
+            'Illegal character {} at line {}'.format(
+                t.value[0],
+                self.lineno))
         self.index += 1
+
 
 class MinibasicParser(Parser):
 
@@ -79,7 +81,6 @@ class MinibasicParser(Parser):
     @_('stmt')
     def stmt_list(self, p):
         return [p.stmt]
-
 
     @_('stmt_list stmt')
     def stmt_list(self, p):
@@ -142,11 +143,14 @@ class MinibasicParser(Parser):
     def expr(self, p):
         return p.expr
 
+
 global_names = {}
+
 
 class AST:
     def eval(self):
         pass
+
 
 class Program(AST):
 
@@ -157,6 +161,7 @@ class Program(AST):
         for stmt in self.stmt_list:
             stmt.eval()
 
+
 class Print(AST):
 
     def __init__(self, expr):
@@ -164,6 +169,7 @@ class Print(AST):
 
     def eval(self):
         print(self.expr.eval())
+
 
 class For(AST):
 
@@ -177,6 +183,7 @@ class For(AST):
         while i < times:
             self.stmt.eval()
             times = expr.eval()
+
 
 class If(AST):
 
@@ -203,8 +210,10 @@ class Let(AST):
         global global_names
         global_names[self.id] = self.expr.eval()
 
+
 class Block(AST):
     pass
+
 
 class Id(AST):
 
@@ -214,6 +223,7 @@ class Id(AST):
     def eval(self):
         return global_names[self.id]
 
+
 class Constant(AST):
 
     def __init__(self, value):
@@ -221,6 +231,7 @@ class Constant(AST):
 
     def eval(self):
         return self.value
+
 
 class BinOp(AST):
 
@@ -254,5 +265,5 @@ if __name__ == '__main__':
             minibasic_parser.parse(lexed).eval()
         except EOFError:
             exit(0)
-        except:
+        except BaseException:
             print('Action "{}" not recognized'.format(s))

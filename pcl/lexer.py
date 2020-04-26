@@ -2,8 +2,10 @@ from sly import Lexer
 from pcl.error import PCLLexerError
 import re
 
+
 def regex(s):
     return re.escape(s)
+
 
 class PCLLexer(Lexer):
 

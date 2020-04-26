@@ -17,7 +17,6 @@ valid_examples = glob.iglob(os.path.join(pos_examples_folder, "*.pcl"))
 invalid_examples = glob.iglob(os.path.join(neg_examples_folder, "*.pcl"))
 
 
-
 @pytest.mark.parametrize("filename", valid_examples)
 def test_valid(filename):
     print('Running example: {}'.format(filename))
@@ -49,6 +48,7 @@ def test_invalid(filename):
         print(e)
     except PCLError as e:
         raise e
+
 
 if __name__ == '__main__':
     pytest.main(args=[os.path.abspath(__file__)])
