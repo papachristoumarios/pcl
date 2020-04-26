@@ -62,63 +62,109 @@ class SymbolEntry:
         self.cvalue = cvalue
         self.by_reference = by_reference
 
+class Builtin:
 
-# TODO CONVERT TO CLASS
-builtins = [
-            ('writeInteger',
-             SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_PROC),
-                         name_type=NameType.N_PROCEDURE),
-             (LLVMTypes.T_PROC, [LLVMTypes.T_INT]),
-             [
-                 SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_INT),
-                             name_type=NameType.N_FORMAL),
+    def __init__(self, name, stype, func_type, name_type, arg_stypes=[]):
+        self.name = name
+        self.stype = stype
+        self.func_type = func_type
+        self.arg_stypes = arg_stypes
+        self.name_type = name_type
+        self.builtin_entry = SymbolEntry(stype=self.stype, name_type=self.name_type)
+        self.builtin_formals = []
+        for arg_stype in arg_stypes:
+            by_reference = arg_stype[0] == ComposerType.T_VAR_ARRAY
+            entry = SymbolEntry(stype=arg_stype, name_type=NameType.N_FORMAL, by_reference=by_reference)
+            self.builtin_formals.append(entry)
 
-             ]),
-             ('writeChar',
-              SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_PROC),
-                          name_type=NameType.N_PROCEDURE),
-              (LLVMTypes.T_PROC, [LLVMTypes.T_CHAR]),
-              [
-                  SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_CHAR),
-                              name_type=NameType.N_FORMAL),
+    def __iter__(self):
+        return iter([self.name, self.builtin_entry, self.func_type, self.builtin_formals])
 
-              ]),
-              ('writeReal',
-               SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_PROC),
-                           name_type=NameType.N_PROCEDURE),
-               (LLVMTypes.T_PROC, [LLVMTypes.T_REAL]),
-               [
-                   SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_REAL),
-                               name_type=NameType.N_FORMAL),
+    @staticmethod
+    def write_builtins():
+        types = [
+            'integer',
+            'char',
+            'real',
+            'boolean',
+        ]
+        builtins = []
 
-               ]),
-               ('writeBoolean',
-                SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_PROC),
-                            name_type=NameType.N_PROCEDURE),
-                (LLVMTypes.T_PROC, [LLVMTypes.T_BOOL]),
-                [
-                    SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_BOOL),
-                                name_type=NameType.N_FORMAL),
+        for type_ in types:
+            name = 'write' + type_.capitalize()
+            name_type = NameType.N_PROCEDURE
+            stype = (ComposerType.T_NO_COMP, BaseType.T_PROC)
+            func_type = (LLVMTypes.T_PROC, [LLVMTypes.mapping[type_]])
+            arg_stypes = [(ComposerType.T_NO_COMP, BaseType(type_))]
+            builtin = Builtin(name=name, name_type=name_type, stype=stype, func_type=func_type, arg_stypes=arg_stypes)
+            builtins.append(builtin)
 
-                ]),
-                ('writeString',
-                 SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_PROC),
-                             name_type=NameType.N_PROCEDURE),
-                 (LLVMTypes.T_PROC, [ir.ArrayType(LLVMTypes.T_CHAR, 0).as_pointer()]),
-                 [
-                     SymbolEntry(stype=((ComposerType.T_VAR_ARRAY, (ComposerType.T_NO_COMP, BaseType.T_CHAR))),
-                                 name_type=NameType.N_FORMAL, by_reference=True),
+        builtins.append(
+            Builtin(name='writeString', stype=(ComposerType.T_NO_COMP, BaseType.T_PROC), name_type=NameType.N_PROCEDURE, func_type=(LLVMTypes.T_PROC, [ir.ArrayType(LLVMTypes.T_CHAR, 0).as_pointer()]), arg_stypes=[(ComposerType.T_VAR_ARRAY, (ComposerType.T_NO_COMP, BaseType.T_CHAR))])
+        )
 
-                 ]),
-             ('readInteger',
-              SymbolEntry(stype=(ComposerType.T_NO_COMP, BaseType.T_INT),
-                          name_type=NameType.N_FUNCTION),
-              (LLVMTypes.T_INT, []),
-              [
+        return builtins
 
-              ])
-            ]
+    @staticmethod
+    def read_builtins():
+        types = [
+            'integer',
+            'char',
+            'real',
+            'boolean',
+        ]
+        builtins = []
 
+        for type_ in types:
+            name = 'read' + type_.capitalize()
+            name_type = NameType.N_FUNCTION
+            stype = (ComposerType.T_NO_COMP, BaseType(type_))
+            func_type = (LLVMTypes.mapping[type_], [])
+            arg_stypes = []
+            builtin = Builtin(name=name, name_type=name_type, stype=stype, func_type=func_type, arg_stypes=arg_stypes)
+            builtins.append(builtin)
+
+        builtins.append(
+            Builtin(name='readString', stype=(ComposerType.T_NO_COMP, BaseType.T_PROC), name_type=NameType.N_PROCEDURE, func_type=(LLVMTypes.T_PROC, [LLVMTypes.T_INT, ir.ArrayType(LLVMTypes.T_CHAR, 0).as_pointer()]), arg_stypes=[(ComposerType.T_NO_COMP, BaseType.T_INT), (ComposerType.T_VAR_ARRAY, (ComposerType.T_NO_COMP, BaseType.T_CHAR))])
+        )
+
+        return builtins
+
+    @staticmethod
+    def math_builtins():
+        math_fns = {
+            ('real', 'real') : ['fabs', 'sqrt', 'sin', 'cos', 'tan', 'arctan', 'exp', 'ln'],
+            ('integer', 'integer') : ['abs'],
+            ('real', 'integer') : ['trunc', 'round'],
+            ('char', 'integer') : ['ord'],
+            ('integer', 'char') : ['chr'],
+            (None, 'real') : ['pi']
+        }
+        builtins = []
+
+        for func_type_names, func_names in math_fns.items():
+            arg_type, ret_type = func_type_names
+            for name in func_names:
+                name_type = NameType.N_FUNCTION
+                stype = (ComposerType.T_NO_COMP, BaseType(ret_type))
+                try:
+                    func_type = (LLVMTypes.mapping[ret_type], [LLVMTypes.mapping[arg_type]])
+                except:
+                    func_type = (LLVMTypes.mapping[ret_type], [])
+
+                if arg_type:
+                    arg_stypes = [(ComposerType.T_NO_COMP, BaseType(arg_type))]
+                else:
+                    arg_stypes = []
+
+                builtin = Builtin(name=name, name_type=name_type, stype=stype, func_type=func_type, arg_stypes=arg_stypes)
+
+                builtins.append(builtin)
+
+        return builtins
+builtins = Builtin.write_builtins() + \
+            Builtin.read_builtins() + \
+            Builtin.math_builtins()
 
 class Scope:
     def __init__(self, name):
