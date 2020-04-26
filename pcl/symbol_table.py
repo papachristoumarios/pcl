@@ -159,6 +159,7 @@ class SymbolTable:
         self.scopes = deque([])
         self.formals = deque([])
         self.scope_names_indices = deque([])
+        self.autos = defaultdict(int)
 
         # scope for builtins
         self.open_scope()
@@ -268,3 +269,7 @@ class SymbolTable:
                 msg = 'Expected forward declaration for header: {}'.format(
                     header)
                 raise PCLSymbolTableError(msg)
+
+    def auto(self, name):
+        self.autos[name] += 1
+        return self.autos[name]

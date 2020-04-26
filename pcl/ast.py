@@ -156,7 +156,7 @@ class Program(AST):
         # Close main scope
         self.symbol_table.close_scope()
 
-    @AST.codegen_decorator
+
     def codegen(self):
         '''
             Creates the main scope of the program and
@@ -188,7 +188,7 @@ class Body(AST):
         # Run sem to block
         self.block.sem()
 
-    @AST.codegen_decorator
+
     def codegen(self):
         # Run codegen to locals
         for local in self.locals_:
@@ -256,7 +256,7 @@ class LocalHeader(Local):
         # Close function scope
         self.symbol_table.close_scope()
 
-    @AST.codegen_decorator
+
     def codegen(self):
 
         # Infer function type (signature)
@@ -382,7 +382,7 @@ class VarList(Local):
         for var in self.vars_:
             var.sem()
 
-    @AST.codegen_decorator
+
     def codegen(self):
         for var in self.vars_:
             var.codegen()
@@ -404,7 +404,7 @@ class Var(Local):
                 name_type=NameType.N_VAR)
             self.symbol_table.insert(id_, var_entry)
 
-    @AST.codegen_decorator
+
     def codegen(self):
         self.type_.codegen()
         for id_ in self.ids:
@@ -443,7 +443,7 @@ class Label(Local):
                 name_type=NameType.N_LABEL)
             self.symbol_table.insert(id_, label_entry)
 
-    @AST.codegen_decorator
+
     def codegen(self):
         pass
 
@@ -476,7 +476,7 @@ class Forward(Local):
                 self.symbol_table.insert_formal(
                     'forward_' + self.header.id_, formal_id, formal_entry)
 
-    @AST.codegen_decorator
+
     def codegen(self):
         # Infer function type (signature)
         if self.header.func_type:
@@ -553,7 +553,7 @@ class Header(AST):
                 name_type=NameType.N_VAR)
             self.symbol_table.insert('result', result_entry)
 
-    @AST.codegen_decorator
+
     def codegen(self):
         if self.func_type:
             self.func_type.codegen()
@@ -589,7 +589,7 @@ class Formal(AST):
 
         self.stype = self.type_.stype
 
-    @AST.codegen_decorator
+
     def codegen(self):
         pass
 
@@ -603,7 +603,7 @@ class Type(AST):
     def sem(self):
         self.stype = (ComposerType.T_NO_COMP, BaseType(self.type_))
 
-    @AST.codegen_decorator
+
     def codegen(self):
         self.cvalue = LLVMTypes.mapping[self.type_]
 
@@ -624,7 +624,7 @@ class PointerType(Type):
         base_type = self.type_.stype
         self.stype = (ComposerType.T_PTR, base_type)
 
-    @AST.codegen_decorator
+
     def codegen(self):
         self.type_.codegen()
         self.cvalue = ir.PointerType(self.type_.cvalue)
@@ -647,7 +647,7 @@ class ArrayType(Type):
             msg = 'Negative length specified'
             self.raise_exception_helper(msg, PCLSemError)
 
-    @AST.codegen_decorator
+
     def codegen(self):
         self.type_.codegen()
         self.cvalue = ir.ArrayType(self.type_.cvalue, self.length)
@@ -666,7 +666,7 @@ class Statement(AST):
             self.symbol_table.lookup(self.name)
             self.stmt.sem()
 
-    @AST.codegen_decorator
+
     def codegen(self):
         if self.name:
             # Declare labeled statement as a basic block
@@ -706,7 +706,7 @@ class Block(Statement):
         for stmt in self.stmt_list:
             stmt.sem()
 
-    @AST.codegen_decorator
+
     def codegen(self):
         for stmt in self.stmt_list:
             stmt.codegen()
@@ -752,7 +752,7 @@ class Call(Statement):
                     msg = 'Incompatible assignment type: {}'.format(formal_name)
                     self.raise_exception_helper(msg, PCLSemError)
 
-    @AST.codegen_decorator
+
     def codegen(self):
         # WIP
         real_params = []
@@ -809,7 +809,7 @@ class If(Statement):
         if self.else_stmt:
             self.else_stmt.sem()
 
-    @AST.codegen_decorator
+
     def codegen(self):
         self.expr.codegen()
 
@@ -840,7 +840,7 @@ class While(Statement):
         self.expr.type_check((ComposerType.T_NO_COMP, BaseType.T_BOOL))
         self.stmt.sem()
 
-    @AST.codegen_decorator
+
     def codegen(self):
         w_body_block = self.builder.append_basic_block()
         w_after_block = self.builder.append_basic_block()
@@ -866,7 +866,7 @@ class Goto(Statement):
     def sem(self):
         self.symbol_table.lookup(self.id_, last_scope=True)
 
-    @AST.codegen_decorator
+
     def codegen(self):
         # TODO fix non terminating block
         helper_block = self.builder.append_basic_block()
@@ -892,7 +892,7 @@ class Return(Statement):
         except PCLSymbolTableError:
             pass
 
-    @AST.codegen_decorator
+
     def codegen(self):
         return_block = self.builder.append_basic_block()
         self.builder.branch(return_block)
@@ -918,7 +918,7 @@ class Empty(Statement):
     def sem(self):
         pass
 
-    @AST.codegen_decorator
+
     def codegen(self):
         pass
 
@@ -958,7 +958,7 @@ class New(Statement):
             # ^t -> t
             self.stype = self.lvalue.stype[1]
 
-    @AST.codegen_decorator
+
     def codegen(self):
         self.lvalue.codegen()
         # alloca_type = self.lvalue.ptr.type.pointee.pointee
@@ -999,7 +999,7 @@ class Dispose(Statement):
 
         self.stype = (ComposerType.T_NO_COMP, BaseType.T_NIL)
 
-    @AST.codegen_decorator
+
     def codegen(self):
         self.lvalue.codegen()
         self.lvalue.set_nil()
@@ -1044,7 +1044,7 @@ class IntegerConst(RValue):
     def sem(self):
         self.stype = (ComposerType.T_NO_COMP, BaseType.T_INT)
 
-    @AST.codegen_decorator
+
     def codegen(self):
         self.cvalue = ir.Constant(LLVMTypes.T_INT, self.value)
 
@@ -1062,7 +1062,7 @@ class RealConst(RValue):
     def sem(self):
         self.stype = (ComposerType.T_NO_COMP, BaseType.T_REAL)
 
-    @AST.codegen_decorator
+
     def codegen(self):
         self.cvalue = ir.Constant(LLVMTypes.T_REAL, self.value)
 
@@ -1080,7 +1080,7 @@ class CharConst(RValue):
     def sem(self):
         self.stype = (ComposerType.T_NO_COMP, BaseType.T_CHAR)
 
-    @AST.codegen_decorator
+
     def codegen(self):
         self.cvalue = ir.Constant(LLVMTypes.T_CHAR, self.value)
 
@@ -1098,7 +1098,7 @@ class BoolConst(RValue):
     def sem(self):
         self.stype = (ComposerType.T_NO_COMP, BaseType.T_BOOL)
 
-    @AST.codegen_decorator
+
     def codegen(self):
         self.cvalue = ir.Constant(LLVMTypes.T_BOOL, self.value)
 
@@ -1131,7 +1131,7 @@ class Nil(RValue):
     def sem(self):
         self.stype = (ComposerType.T_NO_COMP, BaseType.T_NIL)
 
-    @AST.codegen_decorator
+
     def codegen(self):
         pass
 
@@ -1151,7 +1151,7 @@ class ArUnOp(RValue):
         self.rhs.type_check(arithmetic_types)
         self.stype = self.rhs.stype
 
-    @AST.codegen_decorator
+
     def codegen(self):
         self.rhs.codegen()
 
@@ -1181,7 +1181,7 @@ class LogicUnOp(RValue):
         self.rhs.type_check((ComposerType.T_NO_COMP, BaseType.T_BOOL))
         self.stype = self.rhs.stype
 
-    @AST.codegen_decorator
+
     def codegen(self):
         self.rhs.codegen()
         self.cvalue = self.builder.not_(self.rhs.cvalue)
@@ -1220,7 +1220,7 @@ class ArOp(RValue):
 
         self.stype = int_type
 
-    @AST.codegen_decorator
+
     def codegen(self):
         self.lhs.codegen()
         self.rhs.codegen()
@@ -1292,7 +1292,7 @@ class CompOp(RValue):
 
         self.stype = (ComposerType.T_NO_COMP, BaseType.T_BOOL)
 
-    @AST.codegen_decorator
+
     def codegen(self):
         self.lhs.codegen()
         self.rhs.codegen()
@@ -1355,7 +1355,7 @@ class LogicOp(RValue):
 
         self.stype = bool_type
 
-    @AST.codegen_decorator
+
     def codegen(self):
         self.lhs.codegen()
         self.rhs.codegen()
@@ -1384,7 +1384,7 @@ class AddressOf(RValue):
         self.lvalue.sem()
         self.stype = (ComposerType.T_PTR, self.lvalue.stype)
 
-    @AST.codegen_decorator
+
     def codegen(self):
         self.lvalue.codegen()
         self.cvalue = self.symbol_table.lookup(self.lvalue.id_).cvalue
@@ -1417,7 +1417,7 @@ class NameLValue(LValue):
             msg = 'Uniitialized lvalue: {}'.format(self.id_)
             self.raise_warning_helper(msg)
 
-    @AST.codegen_decorator
+
     def codegen(self):
         self.ptr = self.symbol_table.lookup(self.id_).cvalue
         # OPTIMIZE remove redundant loads
@@ -1449,7 +1449,7 @@ class Result(NameLValue):
        result = self.symbol_table.lookup('result')
        self.stype = result.stype
 
-    @AST.codegen_decorator
+
     def codegen(self):
        self.ptr = self.symbol_table.lookup('result').cvalue
 
@@ -1473,7 +1473,7 @@ class StringLiteral(LValue):
             (ComposerType.T_NO_COMP,
              BaseType.T_CHAR))
 
-    @AST.codegen_decorator
+
     def codegen(self):
         self.cvalue = ir.Constant(
             ir.ArrayType(
@@ -1509,7 +1509,7 @@ class Deref(LValue):
 
         self.stype = self.expr.stype[1]
 
-    @AST.codegen_decorator
+
     def codegen(self):
         self.expr.codegen()
         self.ptr = self.expr.cvalue
@@ -1546,7 +1546,7 @@ class SetExpression(LValue):
             msg = 'Invalid set expression {} := {}'.format(self.lvalue.stype, self.expr.stype)
             self.raise_exception_helper(msg, PCLSemError)
 
-    @AST.codegen_decorator
+
     def codegen(self):
         self.expr.codegen()
         self.lvalue.codegen()
@@ -1578,7 +1578,7 @@ class LBrack(LValue):
         self.lvalue.sem()
         self.stype = self.lvalue.stype[1]
 
-    @AST.codegen_decorator
+
     def codegen(self):
         self.expr.codegen()
         self.lvalue.codegen()

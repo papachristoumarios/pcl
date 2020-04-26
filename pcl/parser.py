@@ -512,20 +512,19 @@ if __name__ == '__main__':
     parser = PCLParser()
 
     s = '''
-        program custom_str;
-        var x : integer;
+        program toy;
 
-        procedure foo();
-            var x : integer;
-        begin
-            writeInteger(x);
-            x := x + 1;
-        end;
+        var number, limit: integer;
 
         begin
-            x := 1;
-            foo();
-            writeInteger(x);
+            limit := 100;
+            number := 0;
+            while number < limit do
+            begin
+                number := number + 1;
+
+            end;
+
         end.
 
     '''
