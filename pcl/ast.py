@@ -72,15 +72,7 @@ class AST(ABC):
         msg = 'codegen method not implemented for {}'.format(
             self.__class__.__name__)
         raise NotImplementedError(msg)
-
-    @staticmethod
-    def codegen_decorator(codegen_fn):
-        ''' Decorator that allows memoization on code generation '''
-        def wrapper(self):
-            if self.cvalue is None:
-                codegen_fn(self)
-        return wrapper
-
+        
     def pipeline(self, *stages):
         for stage in stages:
             getattr(self, stage)()
