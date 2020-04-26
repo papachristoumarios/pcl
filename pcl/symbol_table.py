@@ -162,6 +162,8 @@ class Builtin:
                 builtins.append(builtin)
 
         return builtins
+
+
 builtins = Builtin.write_builtins() + \
             Builtin.read_builtins() + \
             Builtin.math_builtins()
@@ -303,18 +305,6 @@ class SymbolTable:
             if header_name in formals_entry.locals_:
                 for elem in formals_entry.locals_[header_name].items():
                     yield elem
-
-    def needs_forward_declaration(self, header):
-        if len(self.scope_names_indices) == 0:
-            return
-        scope_index = self.scope_names_indices[-1]
-        if self.scopes[scope_index].name == header:
-            try:
-                self.lookup('forward_' + header)
-            except PCLSymbolTableError:
-                msg = 'Expected forward declaration for header: {}'.format(
-                    header)
-                raise PCLSymbolTableError(msg)
 
     def auto(self, name):
         self.autos[name] += 1
