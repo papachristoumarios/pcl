@@ -413,7 +413,7 @@ class Var(Local):
             # Name is needed for initialization
             # Should not be used by the programmer
             # Naming convention is by definition unique
-            global_id_name = '{}_{}'.format(id_, len(self.symbol_table.scopes)-1)
+            global_id_name = '{}_{}'.format(id_, self.symbol_table.auto(id_))
             global_id_cvalue = ir.GlobalVariable(self.module, self.type_.cvalue, name=global_id_name)
 
             # Set initializer to zeroinitializer ir.Constant(typ, None)
@@ -723,7 +723,6 @@ class Call(Statement):
 
         # Assert that if call is recursive (calee calls himself) then fcn must
         # be forward
-        self.symbol_table.needs_forward_declaration(self.id_)
 
         try:
             call_entry = self.symbol_table.lookup(self.id_)
