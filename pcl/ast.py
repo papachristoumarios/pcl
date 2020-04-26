@@ -1,10 +1,11 @@
 import json
 import sys
+import warnings
 from abc import ABC, abstractmethod
 from collections import deque
 from llvmlite import ir, binding
 
-from pcl.error import PCLParserError, PCLSemError, PCLCodegenError
+from pcl.error import *
 from pcl.symbol_table import *
 from pcl.codegen import *
 
@@ -48,7 +49,7 @@ class AST(ABC):
     def raise_warning_helper(self, msg):
         ''' Helper function to raise warnings including line numbers '''
         msg_new = 'WARNING {} at line {}: {}\n'.format(self.__class__.__name__, self.lineno, msg)
-        sys.stderr.write(msg_new)
+        warnings.warn(msg_new, PCLWarning)
 
     @abstractmethod
     def sem(self):

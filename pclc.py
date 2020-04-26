@@ -1,7 +1,7 @@
 import argparse
 import sys
 import os
-
+import warnings
 from pcl import PCLCError, PCLError
 from pcl import PCLLexer
 from pcl import PCLParser
@@ -30,6 +30,7 @@ def get_argparser():
         help='Input filename')
     argparser.add_argument('-O', default=0, type=int, help='Optimization level')
     argparser.add_argument('--pipeline', nargs='+', default=['lex', 'parse', 'sem', 'codegen'])
+    argparser.add_argument('-W', action='store_true', help='Enable warnings')
     argparser.add_argument(
         '-f',
         action='store_true',
@@ -80,6 +81,9 @@ if __name__ == '__main__':
     argparser = get_argparser()
     args = argparser.parse_args()
 
+    if not args.W:
+        warnings.simplefilter("ignore")
+
     if args.v:
         print(__version__)
         exit(0)
@@ -124,4 +128,3 @@ if __name__ == '__main__':
             driver.parser.codegen.generate_outputs(name, llc_to_stdout=True)
         else:
             driver.parser.codegen.generate_outputs(name, llc_to_stdout=False)
-    
