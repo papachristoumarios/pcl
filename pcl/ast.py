@@ -177,6 +177,10 @@ class Body(AST):
 
     @AST.sem_decorator
     def sem(self):
+        '''
+            Runs semantic to locals and then to block.
+        '''
+
         # Run semantic to locals
         for local in self.locals_:
             local.sem()
@@ -185,6 +189,9 @@ class Body(AST):
         self.block.sem()
 
     def codegen(self):
+        '''
+            Runs codegen to locals and then to block.
+        '''
         # Run codegen to locals
         for local in self.locals_:
             local.codegen()
@@ -211,7 +218,17 @@ class LocalHeader(Local):
 
     @AST.sem_decorator
     def sem(self):
-        # TODO add declaration mismatch with forward and localheader
+        '''
+            Perform semantic analysis on a header accompanied by a body
+            The discrete steps are the following:
+                1. Infer the semantic type of the function/procedure
+                2. Register header to the symbol table
+                3. Register formals to the symbol table
+                4. Open a scope
+                5. Register formals as local variables
+                6. Perform semantic analysis on the body
+                7. Close the scope
+        '''
 
         if self.header.func_type:
             # function
@@ -258,6 +275,26 @@ class LocalHeader(Local):
         self.symbol_table.close_scope()
 
     def codegen(self):
+        '''
+            Run codegen on a header accompanied by a body. The
+            discrete steps are:
+                1. Infer header and formal types (in llvmlite)
+                    1a. A parameter x with type t that passes by value is accompanied
+                    by an ir.Argument of type t
+                    1b. A parameter x with type t that passes by reference is accompanied
+                    by an ir.Argument of type t*
+                2. Register the function signature (ir.FunctionType)
+                    2a. Check if forward f(...) : type is defined
+                3. Register the function to the symbol table (codegen value)
+                4. Open a scope
+                5. Register arguments as local variables (which are global wrt to
+                    the inside scopes)
+                    5a. A parameter x with type t that passes by value is copied
+                    within the ir.Function body
+                    5b. A parameter x with type t that passes by value has its pointer
+                    stored
+                6. Close scope
+        '''
 
         # Infer function type (signature)
         if self.header.func_type:
@@ -326,10 +363,6 @@ class LocalHeader(Local):
                     self.symbol_table.insert_formal(
                         self.header.id_, formal_id, arg_formal_entry)
                     counter += 1
-                    # arg_ptr_cvalue = self.builder.alloca(formal_types_cvalues[counter])
-                    # arg_entry_cvalue = self.builder.load(arg)
-                    # arg_entry = SymbolEntry(stype=formal.stype, name_type=NameType.N_VAR, cvalue=arg_entry_cvalue)
-                    # counter += 1
 
             # Open a named scope
             self.symbol_table.open_scope(self.header.id_)
@@ -343,8 +376,18 @@ class LocalHeader(Local):
                 for formal_id in formal.ids:
                     arg = header_args[counter]
                     if not formal.by_reference:
+                        arg_name = '{}_{}'.format(formal_id, self.symbol_table.auto(formal_id))
+                        arg_cvalue = ir.GlobalVariable(
+                            self.module, arg.type, name=arg_name)
+
+                        # If variable needs only local storage we can use alloca
+                        # arg_cvalue = self.builder.alloca(arg.type)
+
+                        # Set initializer to zeroinitializer ir.Constant(typ, None)
+                        arg_cvalue.initializer = ir.Constant(arg.type, None)
+                        arg_cvalue.linkage = 'internal'
+
                         # Make a copy of the variable
-                        arg_cvalue = self.builder.alloca(arg.type)
                         self.builder.store(arg, arg_cvalue)
                     else:
                         # Pass the variable pointer
@@ -396,6 +439,10 @@ class Var(Local):
 
     @AST.sem_decorator
     def sem(self):
+        '''
+            Infer type of variable list and register all identifiers
+            to the symbol table/
+        '''
         self.type_.sem()
         # Iterate over all names and register variables
         for id_ in self.ids:
@@ -405,6 +452,11 @@ class Var(Local):
             self.symbol_table.insert(id_, var_entry)
 
     def codegen(self):
+        '''
+            Registers all the variables (as ir.GlobalVariable) at the
+            symbol table. The variable initializers are set to
+            zeroinitializer, provided by LLVM.
+        '''
         self.type_.codegen()
         for id_ in self.ids:
             # Global symbols
@@ -418,6 +470,10 @@ class Var(Local):
 
             # Set initializer to zeroinitializer ir.Constant(typ, None)
             global_id_cvalue.initializer = ir.Constant(self.type_.cvalue, None)
+
+            # Internal linkage means that these variables are not accessible if
+            # the module is imported
+            global_id_cvalue.linkage = 'internal'
 
             var_entry = SymbolEntry(
                 stype=self.type_.stype,
@@ -435,6 +491,9 @@ class Label(Local):
 
     @AST.sem_decorator
     def sem(self):
+        '''
+            Register labels at the symbol table
+        '''
         # Iterate over all names and register variables
         for id_ in self.ids:
             label_entry = SymbolEntry(
@@ -456,6 +515,9 @@ class Forward(Local):
 
     @AST.sem_decorator
     def sem(self):
+        '''
+            Registers forward declaration on symbol table
+        '''
         if self.header.func_type:
             self.header.func_type.sem()
             header_type = self.header.func_type.stype
@@ -477,6 +539,9 @@ class Forward(Local):
                     'forward_' + self.header.id_, formal_id, formal_entry)
 
     def codegen(self):
+        '''
+            Registers declaration on the symbol table as a global function (ir.Function)
+        '''
         # Infer function type (signature)
         if self.header.func_type:
             # function
@@ -504,6 +569,8 @@ class Forward(Local):
             self.module,
             header_type_cvalue,
             name=self.header.id_)
+
+        header_cvalue.is_declaration = True
 
         if self.header.func_type:
             header_entry = SymbolEntry(
@@ -545,6 +612,9 @@ class Header(AST):
 
     @AST.sem_decorator
     def sem(self):
+        '''
+            Register function result at symbol table.
+        '''
         if self.func_type:
             result_entry = SymbolEntry(
                 stype=self.func_type.stype,
@@ -552,6 +622,9 @@ class Header(AST):
             self.symbol_table.insert('result', result_entry)
 
     def codegen(self):
+        '''
+            Register function result at symbol table.
+        '''
         if self.func_type:
             self.func_type.codegen()
             result_ptr = self.builder.alloca(self.func_type.cvalue)
@@ -559,6 +632,19 @@ class Header(AST):
                 stype=self.func_type.stype,
                 name_type=NameType.N_VAR, cvalue=result_ptr)
             self.symbol_table.insert('result', result_entry)
+
+    def __eq__(self, other):
+        if self.id_ != other.id_ or self.stype != other.stype:
+            return False
+
+        for formal_1, formal_2 in zip(self.formals, other.formals):
+            if len(formal_1.ids) != len(formal_2.ids):
+                return False
+
+            if formal_1.type.stype != formal_2.type.stype:
+                return False
+
+        return True
 
 
 class Formal(AST):
@@ -579,6 +665,10 @@ class Formal(AST):
 
     @AST.sem_decorator
     def sem(self):
+        '''
+            Check if formal parameter(s) are well defined.
+            Arrays are not allowed to pass by value
+        '''
         self.type_.sem()
         if self.type_.stype[0] in [
                 ComposerType.T_CONST_ARRAY,
@@ -601,9 +691,15 @@ class Type(AST):
 
     @AST.sem_decorator
     def sem(self):
+        '''
+            Set the semantic type to the provided signature.
+        '''
         self.stype = (ComposerType.T_NO_COMP, BaseType(self.type_))
 
     def codegen(self):
+        '''
+            Generate type signature
+        '''
         self.cvalue = LLVMTypes.mapping[self.type_]
 
 
@@ -646,10 +742,16 @@ class ArrayType(Type):
             module,
             symbol_table,
             lineno)
+        # Const array has length > 0 and var array has length = 0
         self.length = int(length)
 
     @AST.sem_decorator
     def sem(self):
+        '''
+            Infer type of array
+            1. If length = 0 then declare a variable array
+            2. If length > 0 then declare a constant array
+        '''
         self.type_.sem()
         if self.length > 0:
             self.stype = (ComposerType.T_CONST_ARRAY, self.type_.stype)
@@ -660,6 +762,9 @@ class ArrayType(Type):
             self.raise_exception_helper(msg, PCLSemError)
 
     def codegen(self):
+        '''
+            Declare an LLVM type of [length x type]
+        '''
         self.type_.codegen()
         self.cvalue = ir.ArrayType(self.type_.cvalue, self.length)
 
@@ -673,11 +778,19 @@ class Statement(AST):
 
     @AST.sem_decorator
     def sem(self):
+        '''
+            Assert that label exists (if statement is named)
+            and perform semantic analysis inside.
+        '''
         if self.name:
             self.symbol_table.lookup(self.name)
             self.stmt.sem()
 
     def codegen(self):
+        '''
+            Register label inside the module (if statement is named)
+            and generate code inside the statement.
+        '''
         if self.name:
             # Declare labeled statement as a basic block
             self.cvalue = self.builder.append_basic_block(self.name)
@@ -706,17 +819,23 @@ class Block(Statement):
 
     @AST.sem_decorator
     def sem(self):
-        # No scope need should be opened because
-        # every scope that contains local
-        # is the result of the following actions in PCL
-        # 1. program
-        # 2. function / procedure declaration
-        # If locals were allowed before every block then
-        # we should open an additional scope here
+        '''
+            Perform semantic analysis on statements inside the block
+            OPTIMIZATION NOTE: No scope need should be opened because
+            every scope that contains local is the result of the following
+            actions in PCL
+                1. program
+                2. function / procedure declaration
+            If locals were allowed before every block then
+            we should open an additional scope here.
+        '''
         for stmt in self.stmt_list:
             stmt.sem()
 
     def codegen(self):
+        '''
+            Run codegen on statements.
+        '''
         for stmt in self.stmt_list:
             stmt.codegen()
 
@@ -729,10 +848,10 @@ class Call(Statement):
 
     @AST.sem_decorator
     def sem(self):
-
-        # Assert that if call is recursive (calee calls himself) then fcn must
-        # be forward
-
+        '''
+            Search for function name and assert that the real parameters
+            are compatible with the formal parameters.
+        '''
         try:
             call_entry = self.symbol_table.lookup(self.id_)
         except PCLSymbolTableError:
@@ -762,7 +881,14 @@ class Call(Statement):
                     self.raise_exception_helper(msg, PCLSemError)
 
     def codegen(self):
-        # WIP
+        '''
+            Register the real parameters (flattened) and pass the required
+            real parameters according to the formal parameters definitions
+            and compatibility.
+                1. Call by reference passes pointer (performs bitcast if needed
+                    for example *[n x type] -> *[0 x type])
+                2. Call by value passes expression codegen value
+        '''
         real_params = []
 
         try:
@@ -819,6 +945,10 @@ class If(Statement):
 
     @AST.sem_decorator
     def sem(self):
+        '''
+            Checks that the condition is a valid boolean and perform semantic
+            analysis on then (and else if defined) statements.
+        '''
         self.expr.sem()
         self.expr.type_check((ComposerType.T_NO_COMP, BaseType.T_BOOL))
 
@@ -827,6 +957,10 @@ class If(Statement):
             self.else_stmt.sem()
 
     def codegen(self):
+        '''
+            Creates code for the if statement using ir.IRBuilder's if_else or
+            if_then commands.
+        '''
         self.expr.codegen()
 
         if self.else_stmt:
@@ -852,11 +986,18 @@ class While(Statement):
 
     @AST.sem_decorator
     def sem(self):
+        '''
+            Similar to the if statement.
+        '''
         self.expr.sem()
         self.expr.type_check((ComposerType.T_NO_COMP, BaseType.T_BOOL))
         self.stmt.sem()
 
     def codegen(self):
+        '''
+            Similar to the if statement.
+            Phi nodes are not needed.
+        '''
         w_body_block = self.builder.append_basic_block()
         w_after_block = self.builder.append_basic_block()
         self.expr.codegen()
@@ -879,9 +1020,18 @@ class Goto(Statement):
 
     @AST.sem_decorator
     def sem(self):
-        self.symbol_table.lookup(self.id_, last_scope=True)
+        '''
+            Asserts that label is declared.
+        '''
+        label = self.symbol_table.lookup(self.id_, last_scope=True)
+        if label.num_queries <= 1:
+            self.raise_exception_helper('Undeclared Label: {}'.format(self.id_), PCLSemError)
+
 
     def codegen(self):
+        '''
+            Jumps to the declared label.
+        '''
         # TODO fix non terminating block
         helper_block = self.builder.append_basic_block()
         self.builder.branch(helper_block)
@@ -899,15 +1049,23 @@ class Return(Statement):
 
     @AST.sem_decorator
     def sem(self):
+        '''
+            Asserts that in case of a function the result is set
+            at least once.
+        '''
         try:
             result_entry = self.symbol_table.lookup('result')
             if result_entry.num_queries <= 1:
-                msg = 'Result must be set once'
+                msg = 'Result must be set at least once'
                 self.raise_warning_helper(msg)
         except PCLSymbolTableError:
             pass
 
     def codegen(self):
+        '''
+            Adds the return command (ret_void) for a function and
+            returns "result" (with ret) for a function.
+        '''
         return_block = self.builder.append_basic_block()
         self.builder.branch(return_block)
         self.builder.position_at_start(return_block)
@@ -948,6 +1106,9 @@ class New(Statement):
 
     @AST.sem_decorator
     def sem(self):
+        '''
+            Assert that created types are compatible.
+        '''
         self.lvalue.sem()
         if self.expr:
             if self.lvalue.stype[0] != ComposerType.T_PTR or self.lvalue.stype[1][0] != ComposerType.T_VAR_ARRAY:
@@ -974,15 +1135,10 @@ class New(Statement):
             self.stype = self.lvalue.stype[1]
 
     def codegen(self):
+        '''
+            Creates a new value and sets lvalue's pointer to point there.
+        '''
         self.lvalue.codegen()
-        # alloca_type = self.lvalue.ptr.type.pointee.pointee
-
-        # if self.expr:
-        #     self.expr.codegen()
-        #     self.cvalue = self.builder.alloca(self.lvalue.ptr.type.pointee.pointee.pointee, self.expr.cvalue)
-        #     # import pdb; pdb.set_trace()
-        #     self.builder.store(self.cvalue, self.lvalue.cvalue)
-        # else:
         self.cvalue = self.builder.alloca(self.lvalue.ptr.type.pointee.pointee)
         self.builder.store(self.cvalue, self.lvalue.ptr)
 
@@ -1006,6 +1162,9 @@ class Dispose(Statement):
 
     @AST.sem_decorator
     def sem(self):
+        '''
+            Asserts that disposal is correct.
+        '''
         self.lvalue.sem()
 
         if self.brackets:
@@ -1021,6 +1180,9 @@ class Dispose(Statement):
         self.stype = (ComposerType.T_NO_COMP, BaseType.T_NIL)
 
     def codegen(self):
+        '''
+            Set lvalue to nil.
+        '''
         self.lvalue.codegen()
         self.lvalue.set_nil()
 
@@ -1129,7 +1291,8 @@ class BoolConst(RValue):
 class Ref(RValue):
     '''
         Declares a pointer to an LValue. That is if
-        t is integer then ^t is a pointer to an integer
+        t is integer then ^t is a pointer to an integer.
+        Should not be reached
     '''
 
     def __init__(self, lvalue, builder, module, symbol_table, lineno):
@@ -1141,10 +1304,12 @@ class Ref(RValue):
         self.lvalue.sem()
         self.stype = (ComposerType.T_PTR, self.lvalue.stype)
 
+    def codegen(self):
+        self.builder.unreachable()
 
 class Nil(RValue):
     '''
-        The null pointer. Must be declared as a singleton.
+        The null pointer. Declared as a singleton.
     '''
 
     def __init__(self, builder, module, symbol_table, lineno):
