@@ -99,11 +99,21 @@ class PCLCodegen:
         # Declare optimization level
         self.pmb.opt_level = level
 
+        # Run LOCAL optimizations on functions
+        self.fpm = binding.FunctionPassManager(self.module)
+        self.pmb.populate(self.fpm)
+        self.fpm.initialize()
+
+        for fcn in self.module.functions:
+            self.fpm.run(fcn)
+
+        self.fpm.finalize()
+
         # Configure module pass manager
         self.mpm = binding.ModulePassManager()
         self.pmb.populate(self.mpm)
 
-        # Run optimizations
+        # Run GLOBAL optimizations on the module
         self.mpm.run(self.module)
 
     def generate_outputs(self, filename, llc_to_stdout=False):
