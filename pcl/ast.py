@@ -1140,6 +1140,7 @@ class New(Statement):
         '''
         self.lvalue.codegen()
         if self.expr:
+            # Creates n x [0 x type]
             self.expr.codegen()
             self.cvalue = self.builder.alloca(self.lvalue.ptr.type.pointee.pointee, self.expr.cvalue)
         else:
