@@ -1139,7 +1139,11 @@ class New(Statement):
             Creates a new value and sets lvalue's pointer to point there.
         '''
         self.lvalue.codegen()
-        self.cvalue = self.builder.alloca(self.lvalue.ptr.type.pointee.pointee)
+        if self.expr:
+            self.expr.codegen()
+            self.cvalue = self.builder.alloca(self.lvalue.ptr.type.pointee.pointee, self.expr.cvalue)
+        else:
+            self.cvalue = self.builder.alloca(self.lvalue.ptr.type.pointee.pointee)
         self.builder.store(self.cvalue, self.lvalue.ptr)
 
 
