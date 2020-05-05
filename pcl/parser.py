@@ -615,39 +615,3 @@ class PCLParser(Parser):
     def error(self, p):
         msg = 'Illegal rule {}'.format(str(p))
         raise PCLParserError(msg)
-
-
-if __name__ == '__main__':
-    lexer = PCLLexer()
-    parser = PCLParser()
-
-    s = '''
-        program toy;
-
-        var number, limit: integer;
-
-        begin
-            limit := 100;
-            number := 0;
-            while number < limit do
-            begin
-                number := number + 1;
-
-            end;
-
-        end.
-
-    '''
-
-    tokens = list(lexer.tokenize(s))
-    print([x.value for x in tokens])
-
-    # tokens = lexer.tokenize(s)
-    program = parser.parse(iter(tokens))
-    program.sem()
-    program.codegen()
-    program.pprint()
-    program.print_module()
-
-    parser.codegen.postprocess_module()
-    parser.codegen.generate_outputs('toy')

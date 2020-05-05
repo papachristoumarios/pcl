@@ -140,17 +140,3 @@ class PCLLexer(Lexer):
     def error(self, t):
         msg = 'Illegal character {} at line {}'.format(t.value[0], self.lineno)
         raise PCLLexerError(msg)
-
-
-if __name__ == '__main__':
-    lexer = PCLLexer()
-    s = '''
-        program collatz;
-            var x, y : integer;
-        end.
-        '''
-    token_names = [x.value for x in lexer.tokenize(s)]
-    token_types = [x.type for x in lexer.tokenize(s)]
-
-    print(token_names)
-    print(token_types)
