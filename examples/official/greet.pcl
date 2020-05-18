@@ -1,0 +1,14 @@
+program greet;
+
+var s: array of char;
+var l: integer;
+
+begin
+    writeString("Enter name len");
+    l := readInteger();
+    writeChar('\n');
+    readString(l, s);
+    writeString("Hello: ");
+    writeString(s);
+    writeChar('\n');
+end.

@@ -1,0 +1,7 @@
+program built;
+
+begin
+    writeReal(fabs(pi()));
+    writeReal(sin(pi()));
+
+end.
