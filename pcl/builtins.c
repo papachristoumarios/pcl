@@ -47,9 +47,9 @@ integer readInteger() {
 }
 
 boolean readBoolean() {
-  boolean n;
+  integer n;
   scanf("%d", &n);
-  return n;
+  return (boolean)n;
 }
 
 chr readChar() {
@@ -59,18 +59,44 @@ chr readChar() {
 }
 
 real readReal() {
-  real n;
+  float n;
   scanf("%f", &n);
-  return n;
+  return (double)n;
 }
 
-chr* readString(integer size, chr *target) {
-  integer i;
-  for (i = 0; i < size; i++) {
-    *target = getchar();
-    target++;
-  }
-  return NULL;
+chr* readString(integer size, chr *s) {
+    if (size <= 0) {
+      return NULL;
+    }
+
+    // Create safeguard buffer
+    chr buf[size];
+
+    // Sets the sequence to 0
+    memset(buf, 0, size);
+
+    if (size == 1) {
+      return NULL;
+    }
+
+    size--; // Nead to read size - 1 chars
+
+    // Counter
+    integer i = 0;
+
+    chr c = getchar();
+
+    // Read the string until EOF or newline
+
+    for (i = 0; i < size; i++) {
+      buf[i] = c;
+      c = getchar();
+      if (c == EOF || c == '\n') break;
+    }
+
+    // Copy from safeguard buffer
+    strcpy((char *)s, (char *)buf);
+    return NULL;
 }
 
 // ln
@@ -85,8 +111,4 @@ real arctan(real x) {
 
 real pi() {
   return (real)M_PI;
-}
-
-chr chr(integer x) {
-    return (chr)x;
 }
