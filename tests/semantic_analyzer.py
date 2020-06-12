@@ -20,7 +20,7 @@ invalid_examples = glob.iglob(os.path.join(neg_examples_folder, "*.pcl"))
 @pytest.mark.parametrize("filename", valid_examples)
 def test_valid(filename):
     print('Running example: {}'.format(filename))
-    with open(filename, 'r', encoding='unicode-escape') as f:
+    with open(filename, 'r', encoding='ascii') as f:
         example = f.read()
     if example == '':
         return
@@ -32,7 +32,7 @@ def test_valid(filename):
 @pytest.mark.parametrize("filename", invalid_examples)
 def test_invalid(filename):
     print('Running example: {}'.format(filename))
-    with open(filename, 'r', encoding='unicode-escape') as f:
+    with open(filename, 'r', encoding='ascii') as f:
         example = f.read()
     if example == '':
         return

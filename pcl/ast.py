@@ -9,6 +9,20 @@ from pcl.error import *
 from pcl.symbol_table import *
 from pcl.codegen import *
 
+def fix_escape(literal):
+    mapping = {
+        '\\n' : '\n',
+        '\\t' : '\t',
+        '\\r' : '\r',
+        '\\0' : '\0',
+        '\\\\' : '\\',
+        '\'' : "'",
+        '\"' : '"'
+    }
+    for key, val in mapping.items():
+        literal = literal.replace(key, val)
+    return literal
+
 
 class AST(ABC):
     '''
@@ -1266,7 +1280,7 @@ class CharConst(RValue):
 
     def __init__(self, value, builder, module, symbol_table, lineno):
         super(CharConst, self).__init__(builder, module, symbol_table, lineno)
-        self.value = ord(value)
+        self.value = ord(fix_escape(value))
 
     @AST.sem_decorator
     def sem(self):
@@ -1665,7 +1679,8 @@ class StringLiteral(LValue):
             module,
             symbol_table,
             lineno)
-        self.literal = literal + '\0'
+
+        self.literal = fix_escape(literal) + '\0'
         self.length = len(self.literal)
 
     @AST.sem_decorator

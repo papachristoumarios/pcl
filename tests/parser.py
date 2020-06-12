@@ -12,7 +12,7 @@ valid_examples = []
 examples_folder = '../examples/'
 
 for filename in glob.iglob(os.path.join(examples_folder, "*.pcl")):
-    with open(filename, 'r', encoding='unicode-escape') as f:
+    with open(filename, 'r', encoding='ascii') as f:
         valid_examples.append(f.read())
 
 

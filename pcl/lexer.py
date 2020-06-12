@@ -113,11 +113,12 @@ class PCLLexer(Lexer):
     # INT_CONS = r'[0-9]+(?!\.)'
     NUMERIC_CONS = r"[0-9]+(\.[0-9]+(['E', 'e']['\+','\-']?[0-9]+)?)?"
     NAME = r"(?<!\d\W\_)[^\d\W\_]\w*"
-    STRING = r"\"[^\"]*\""
-    CHARACTER = r"'(.{0,1}|^$)'"
+    CHARACTER = r"'(.{0,2}|^$)'"
+    STRING = r"\"[^\"\n\t\r]*\""
 
     # Ignore newlines
     ignore_newline = '\n+'
+
 
     def NAME(self, t):
         t.type = PCLLexer.keywords.get(t.value, 'NAME')
@@ -129,6 +130,15 @@ class PCLLexer(Lexer):
         else:
             t.type = 'REAL_CONS'
         return t
+
+    def CHARACTER(self, t):
+        x = t.value[1:-1]
+        if x in ['', '\\n', '\\t', '\\r', '\\0', '\\\\', "\'", '\"']:
+            return t
+        elif len(x) == 1:
+            return t
+        else:
+            self.error(t)
 
     # Increase line counts upon newlines and comments
     def ignore_comment(self, t):

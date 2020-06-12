@@ -57,6 +57,11 @@ def get_argparser():
         action='store_true',
         help='Print the whole traceback (useful for debugging)'
     )
+    argparser.add_argument(
+        '--encoding',
+        default='ascii',
+        type=str
+    )
     return argparser
 
 
@@ -108,10 +113,10 @@ if __name__ == '__main__':
     else:
         if (args.filename != '') ^ args.i ^ args.f:
             if args.filename != '':
-                with open(args.filename, encoding='unicode-escape') as f:
+                with open(args.filename, encoding=args.encoding) as f:
                     program = f.read()
             else:
-                sys.stdin.reconfigure(encoding='unicode-escape')
+                sys.stdin.reconfigure(encoding=args.encoding)
                 program = sys.stdin.read()
                 args.filename = 'a.pcl'
         else:
