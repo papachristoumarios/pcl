@@ -2,7 +2,7 @@ import argparse
 import sys
 import os
 import warnings
-from pcl import PCLCError, PCLError
+from pcl import PCLCError, PCLError, exception_handler
 from pcl import PCLLexer
 from pcl import PCLParser
 from pcl import PCLCodegen
@@ -52,6 +52,11 @@ def get_argparser():
         action='store_true',
         help='Output version'
     )
+    argparser.add_argument(
+        '--enable-traceback',
+        action='store_true',
+        help='Print the whole traceback (useful for debugging)'
+    )
     return argparser
 
 
@@ -91,6 +96,9 @@ if __name__ == '__main__':
     argparser = get_argparser()
     args = argparser.parse_args()
 
+    if not args.enable_traceback:
+        sys.tracebacklimit = 0
+
     if not args.W:
         warnings.simplefilter("ignore")
 
@@ -107,7 +115,7 @@ if __name__ == '__main__':
                 program = sys.stdin.read()
                 args.filename = 'a.pcl'
         else:
-            raise PCLCError('Multiple Inputs defined')
+            sys.stderr.write('Multiple Inputs defined\n')
             exit(1)
 
     driver = PCLCDriver(program)
@@ -123,6 +131,7 @@ if __name__ == '__main__':
     for stage in args.pipeline:
         try:
             pipeline_funcs[stage]()
+
         except PCLError:
             msg = 'Invalid pipeline'
             raise PCLCError(msg)
