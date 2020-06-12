@@ -148,5 +148,5 @@ class PCLLexer(Lexer):
         self.lineno += t.value.count('\n')
 
     def error(self, t):
-        msg = 'Illegal character {} at line {}'.format(t.value[0], self.lineno)
+        msg = 'Illegal character {} at line {}'.format(t.value, self.lineno)
         raise PCLLexerError(msg)

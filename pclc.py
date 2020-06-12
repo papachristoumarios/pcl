@@ -2,6 +2,7 @@ import argparse
 import sys
 import os
 import warnings
+import copy
 from pcl import PCLCError, PCLError
 from pcl import PCLLexer
 from pcl import PCLParser
@@ -55,7 +56,7 @@ def get_argparser():
         help='Output version'
     )
     argparser.add_argument(
-        '--enable-traceback',
+        '--debug',
         action='store_true',
         help='Print the whole traceback (useful for debugging)'
     )
@@ -78,8 +79,14 @@ class PCLCDriver:
 
     def lex(self):
         self.tokens = self.lexer.tokenize(self.program)
+        if len(list(self.tokens)) == 0:
+            raise PCLCError('Please enter a non-empty program')
+        else:
+            self.tokens = self.lexer.tokenize(self.program)
+
 
     def parse(self):
+
         self.parsed = self.parser.parse(self.tokens)
 
     def pprint(self):
@@ -103,7 +110,7 @@ if __name__ == '__main__':
     argparser = get_argparser()
     args = argparser.parse_args()
 
-    if not args.enable_traceback:
+    if not args.debug:
         # sys.tracebacklimit = 0
         sys.excepthook = hook
     if not args.W:
@@ -136,12 +143,7 @@ if __name__ == '__main__':
     }
 
     for stage in args.pipeline:
-        try:
-            pipeline_funcs[stage]()
-
-        except PCLError:
-            msg = 'Invalid pipeline'
-            raise PCLCError(msg)
+        pipeline_funcs[stage]()
 
     if 'codegen' == args.pipeline[-1]:
         driver.parser.codegen.postprocess_module(level=args.O)

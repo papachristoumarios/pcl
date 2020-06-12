@@ -613,5 +613,5 @@ class PCLParser(Parser):
         return p.comma_expr_list
 
     def error(self, p):
-        msg = 'Illegal rule {}'.format(str(p))
+        msg = 'Illegal rule {} at line {}'.format(str(p.value), self.get_lineno(p))
         raise PCLParserError(msg)

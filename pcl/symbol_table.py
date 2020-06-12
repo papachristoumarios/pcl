@@ -23,6 +23,19 @@ class ComposerType(Enum):
     T_VAR_ARRAY = 'T_VAR_ARRAY'
     T_PTR = 'T_PTR'
 
+def str_type(typ):
+    if isinstance(typ, tuple):
+        s = str_type(typ[1])
+        if typ[0] == ComposerType.T_NO_COMP:
+            return s
+        if typ[0] == ComposerType.T_CONST_ARRAY:
+            return 'array [] of ' + s
+        elif typ[0] == ComposerType.T_VAR_ARRAY:
+            return 'array of ' + s
+        elif typ[0] == ComposerType.T_PTR:
+            return '^ ' + s
+    else:
+        return typ.value
 
 def is_composite(stype):
     return stype[0] != ComposerType.T_VAR_ARRAY
@@ -208,12 +221,12 @@ class Scope:
         self.globals = {}
         self.name = name
 
-    def lookup(self, c):
+    def lookup(self, c, lineno=-1):
         return self.locals_.get(c, None)
 
-    def insert(self, c, st):
-        if self.lookup(c):
-            msg = 'Duplicate name {}'.format(c)
+    def insert(self, c, st, lineno=-1):
+        if self.lookup(c, lineno=lineno):
+            msg = 'Duplicate name {} {}'.format(c, 'at line {}'.format(lineno) if lineno > 0 else '')
             raise PCLSymbolTableError(msg)
         else:
             self.locals_[c] = st
@@ -224,12 +237,12 @@ class FormalScope:
         self.locals_ = defaultdict(OrderedDict)
         self.name = name
 
-    def lookup(self, h, c):
+    def lookup(self, h, c, lineno=-1):
         return self.locals_[h].get(c, None)
 
-    def insert(self, h, c, st):
-        if self.lookup(h, c):
-            msg = 'Duplicate formal {}'.format(c)
+    def insert(self, h, c, st, lineno=-1):
+        if self.lookup(h, c, lineno=lineno):
+            msg = 'Duplicate name {} {}'.format(c, 'at line {}'.format(lineno) if lineno > 0 else '')
             raise PCLSymbolTableError(msg)
         else:
             self.locals_[h][c] = st
@@ -287,51 +300,51 @@ class SymbolTable:
         self.scopes.pop()
         self.formals.pop()
 
-    def lookup(self, c, last_scope=False):
+    def lookup(self, c, lineno=-1, last_scope=False):
         if len(self.scopes) == 0:
             raise PCLSymbolTableError('Scopes do not exist')
 
         if last_scope:
-            entry = self.scopes[-1].lookup(c)
+            entry = self.scopes[-1].lookup(c, lineno=lineno)
             if entry:
                 entry.num_queries += 1
                 return entry
         else:
             for scope in reversed(self.scopes):
-                entry = scope.lookup(c)
+                entry = scope.lookup(c, lineno=lineno)
                 if entry:
                     entry.num_queries += 1
                     return entry
 
-        msg = 'Unknown name: {}'.format(c)
+        msg = 'Unknown name: {} at line {}'.format(c, lineno)
         raise PCLSymbolTableError(msg)
 
-    def insert(self, c, t):
+    def insert(self, c, t, lineno=-1):
         if len(self.scopes) == 0:
             raise PCLSymbolTableError('Scopes do not exist')
 
-        self.scopes[-1].insert(c, t)
+        self.scopes[-1].insert(c, t, lineno=lineno)
 
-    def insert_formal(self, header, formal, t):
+    def insert_formal(self, header, formal, t, lineno=-1):
         if len(self.formals) == 0:
             raise PCLSymbolTableError('Formals lists do not exist')
-        self.formals[-1].insert(header, formal, t)
+        self.formals[-1].insert(header, formal, t, lineno=lineno)
 
-    def lookup_formal(self, header, formal, last_scope=False):
+    def lookup_formal(self, header, formal, lineno=-1, last_scope=False):
         if len(self.formals) == 0:
             raise PCLSymbolTableError('Formal scopes do not exist')
 
         if last_scope:
-            entry = self.formals[-1].lookup(header, formal)
+            entry = self.formals[-1].lookup(header, formal, lineno=lineno)
             if entry:
                 return entry
         else:
             for formal in reversed(self.formals):
-                entry = formal.lookup(header, formal)
+                entry = formal.lookup(header, formal, lineno=lineno)
                 if entry:
                     return entry
 
-        msg = 'Unknown formal {} in header {}'.format(formal, header)
+        msg = 'Unknown formal {} in header {} at line {}'.format(formal, header, lineno)
         raise PCLSymbolTableError(msg)
 
     def formal_generator(self, header_name):

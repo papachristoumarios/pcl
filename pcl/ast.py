@@ -108,8 +108,12 @@ class AST(ABC):
         if self.stype == target:
             return True
 
+        if isinstance(target, list):
+            target_str = ', '.join([str_type(t) for t in target])
+        else:
+            target_str = str_type(target)
         msg = '{}: Expected type {}, got type {}. {}'.format(
-            self.__class__.__name__, target, self.stype, ' '.join(args))
+            self.__class__.__name__, target_str, str_type(self.stype), ', '.join([str_type(arg) for arg in args]))
         self.raise_exception_helper(msg, PCLSemError)
 
     def print_module(self):
@@ -258,7 +262,7 @@ class LocalHeader(Local):
                     BaseType.T_PROC),
                 name_type=NameType.N_PROCEDURE)
 
-        self.symbol_table.insert(self.header.id_, header_name_entry)
+        self.symbol_table.insert(self.header.id_, header_name_entry, self.lineno)
 
         for formal in self.header.formals:
             formal.sem()
@@ -268,7 +272,7 @@ class LocalHeader(Local):
                     name_type=NameType.N_FORMAL,
                     by_reference=formal.by_reference)
                 self.symbol_table.insert_formal(
-                    self.header.id_, formal_id, formal_entry)
+                    self.header.id_, formal_id, formal_entry, self.lineno)
 
         # Open function scope
         self.symbol_table.open_scope(self.header.id_)
@@ -280,7 +284,7 @@ class LocalHeader(Local):
             for id_ in formal.ids:
                 id_entry = SymbolEntry(
                     stype=formal.stype, name_type=NameType.N_VAR)
-                self.symbol_table.insert(id_, id_entry)
+                self.symbol_table.insert(id_, id_entry, self.lineno)
 
         # Sem the body
         self.body.sem()
@@ -335,7 +339,7 @@ class LocalHeader(Local):
 
         try:
             header_entry = self.symbol_table.lookup(
-                'forward_' + self.header.id_)
+                'forward_' + self.header.id_, self.lineno)
             header_cvalue = header_entry.cvalue
         except PCLSymbolTableError:
             header_cvalue = ir.Function(
@@ -356,7 +360,7 @@ class LocalHeader(Local):
                     name_type=NameType.N_PROCEDURE,
                     cvalue=header_cvalue)
 
-            self.symbol_table.insert(self.header.id_, header_entry)
+            self.symbol_table.insert(self.header.id_, header_entry, self.lineno)
 
         header_args = header_cvalue.args
 
@@ -375,7 +379,7 @@ class LocalHeader(Local):
                         cvalue=arg,
                         by_reference=formal.by_reference)
                     self.symbol_table.insert_formal(
-                        self.header.id_, formal_id, arg_formal_entry)
+                        self.header.id_, formal_id, arg_formal_entry, self.lineno)
                     counter += 1
 
             # Open a named scope
@@ -410,7 +414,7 @@ class LocalHeader(Local):
                         stype=formal.stype,
                         name_type=NameType.N_VAR,
                         cvalue=arg_cvalue)
-                    self.symbol_table.insert(formal_id, arg_entry)
+                    self.symbol_table.insert(formal_id, arg_entry, self.lineno)
                     counter += 1
 
             # Run codegen to body
@@ -419,7 +423,7 @@ class LocalHeader(Local):
             # Guardian return statements
             try:
                 # Function
-                result_cvalue_ptr = self.symbol_table.lookup('result').cvalue
+                result_cvalue_ptr = self.symbol_table.lookup('result', self.lineno).cvalue
                 result_cvalue = self.builder.load(result_cvalue_ptr)
                 self.builder.ret(result_cvalue)
             except PCLSymbolTableError:
@@ -463,7 +467,7 @@ class Var(Local):
             var_entry = SymbolEntry(
                 stype=self.type_.stype,
                 name_type=NameType.N_VAR)
-            self.symbol_table.insert(id_, var_entry)
+            self.symbol_table.insert(id_, var_entry, self.lineno)
 
     def codegen(self):
         '''
@@ -495,7 +499,7 @@ class Var(Local):
                 cvalue=global_id_cvalue)
 
             # Register global symbol to symbol table
-            self.symbol_table.insert(id_, var_entry)
+            self.symbol_table.insert(id_, var_entry, self.lineno)
 
 
 class Label(Local):
@@ -515,7 +519,7 @@ class Label(Local):
                     ComposerType.T_NO_COMP,
                     BaseType.T_LABEL),
                 name_type=NameType.N_LABEL)
-            self.symbol_table.insert(id_, label_entry)
+            self.symbol_table.insert(id_, label_entry, self.lineno)
 
     def codegen(self):
         pass
@@ -540,7 +544,7 @@ class Forward(Local):
         forward_entry = SymbolEntry(
             stype=header_type,
             name_type=NameType.N_FORWARD)
-        self.symbol_table.insert('forward_' + self.header.id_, forward_entry)
+        self.symbol_table.insert('forward_' + self.header.id_, forward_entry, self.lineno)
 
         for formal in self.header.formals:
             formal.sem()
@@ -550,7 +554,7 @@ class Forward(Local):
                     name_type=NameType.N_FORMAL,
                     by_reference=formal.by_reference)
                 self.symbol_table.insert_formal(
-                    'forward_' + self.header.id_, formal_id, formal_entry)
+                    'forward_' + self.header.id_, formal_id, formal_entry, self.lineno)
 
     def codegen(self):
         '''
@@ -599,7 +603,7 @@ class Forward(Local):
                 name_type=NameType.N_PROCEDURE,
                 cvalue=header_cvalue)
 
-        self.symbol_table.insert('forward_' + self.header.id_, header_entry)
+        self.symbol_table.insert('forward_' + self.header.id_, header_entry, self.lineno)
 
 
 class Header(AST):
@@ -633,7 +637,7 @@ class Header(AST):
             result_entry = SymbolEntry(
                 stype=self.func_type.stype,
                 name_type=NameType.N_VAR)
-            self.symbol_table.insert('result', result_entry)
+            self.symbol_table.insert('result', result_entry, self.lineno)
 
     def codegen(self):
         '''
@@ -645,7 +649,7 @@ class Header(AST):
             result_entry = SymbolEntry(
                 stype=self.func_type.stype,
                 name_type=NameType.N_VAR, cvalue=result_ptr)
-            self.symbol_table.insert('result', result_entry)
+            self.symbol_table.insert('result', result_entry, self.lineno)
 
     def __eq__(self, other):
         if self.id_ != other.id_ or self.stype != other.stype:
@@ -688,7 +692,7 @@ class Formal(AST):
                 ComposerType.T_CONST_ARRAY,
                 ComposerType.T_VAR_ARRAY] and (
                 not self.by_reference):
-            msg = 'Arrays are not allowed to pass by value'
+            msg = 'Arrays: {} are not allowed to pass by value'.format(', '.join(self.ids))
             self.raise_exception_helper(msg, PCLSemError)
 
         self.stype = self.type_.stype
@@ -797,7 +801,7 @@ class Statement(AST):
             and perform semantic analysis inside.
         '''
         if self.name:
-            self.symbol_table.lookup(self.name)
+            self.symbol_table.lookup(self.name, self.lineno)
             self.stmt.sem()
 
     def codegen(self):
@@ -815,7 +819,7 @@ class Statement(AST):
                     BaseType.T_LABEL),
                 name_type=NameType.N_LABEL,
                 cvalue=self.cvalue)
-            self.symbol_table.insert(self.name, label_entry)
+            self.symbol_table.insert(self.name, label_entry, self.lineno)
             self.builder.position_at_start(self.cvalue)
             next_block = self.builder.append_basic_block()
             self.stmt.codegen()
@@ -867,15 +871,19 @@ class Call(Statement):
             are compatible with the formal parameters.
         '''
         try:
-            call_entry = self.symbol_table.lookup(self.id_)
+            call_entry = self.symbol_table.lookup(self.id_, self.lineno)
         except PCLSymbolTableError:
-            call_entry = self.symbol_table.lookup('forward_' + self.id_)
+            call_entry = self.symbol_table.lookup('forward_' + self.id_, self.lineno)
         except BaseException:
             msg = 'Name {} not found'.format(self.id_)
             self.raise_exception_helper(msg, PCLSemError)
 
-        formals = self.symbol_table.formal_generator(self.id_)
+        formals = list(self.symbol_table.formal_generator(self.id_))
         self.stype = call_entry.stype
+
+        if len(formals) != len(self.exprs):
+            msg = 'Invalid number of arguments: {}'.format(self.id_)
+            self.raise_exception_helper(msg, PCLSemError)
 
         # Check arguments
         for expr, (formal_name, formal) in zip(self.exprs, formals):
@@ -906,10 +914,10 @@ class Call(Statement):
         real_params = []
 
         try:
-            call_entry_cvalue = self.symbol_table.lookup(self.id_).cvalue
+            call_entry_cvalue = self.symbol_table.lookup(self.id_, self.lineno).cvalue
         except PCLSymbolTableError:
             call_entry_cvalue = self.symbol_table.lookup(
-                'forward_' + self.id_).cvalue
+                'forward_' + self.id_, self.lineno).cvalue,
         except BaseException:
             # Should never be reached
             msg = 'Unknown name: {}'.format(self.id_)
@@ -1037,7 +1045,7 @@ class Goto(Statement):
         '''
             Asserts that label is declared.
         '''
-        label = self.symbol_table.lookup(self.id_, last_scope=True)
+        label = self.symbol_table.lookup(self.id_, self.lineno, last_scope=True)
         if label.num_queries <= 1:
             self.raise_exception_helper('Undeclared Label: {}'.format(self.id_), PCLSemError)
 
@@ -1050,7 +1058,7 @@ class Goto(Statement):
         helper_block = self.builder.append_basic_block()
         self.builder.branch(helper_block)
         self.builder.position_at_start(helper_block)
-        goto_block = self.symbol_table.lookup(self.id_).cvalue
+        goto_block = self.symbol_table.lookup(self.id_, self.lineno).cvalue
         self.builder.branch(goto_block)
         next_block = self.builder.append_basic_block()
         self.builder.position_at_start(next_block)
@@ -1068,7 +1076,7 @@ class Return(Statement):
             at least once.
         '''
         try:
-            result_entry = self.symbol_table.lookup('result')
+            result_entry = self.symbol_table.lookup('result', self.lineno)
             if result_entry.num_queries <= 1:
                 msg = 'Result must be set at least once'
                 self.raise_warning_helper(msg)
@@ -1085,7 +1093,7 @@ class Return(Statement):
         self.builder.position_at_start(return_block)
         try:
             # Function
-            result_cvalue_ptr = self.symbol_table.lookup('result').cvalue
+            result_cvalue_ptr = self.symbol_table.lookup('result', self.lineno).cvalue
             result_cvalue = self.builder.load(result_cvalue_ptr)
             self.builder.ret(result_cvalue)
         except PCLSymbolTableError:
@@ -1588,7 +1596,7 @@ class AddressOf(RValue):
 
     def codegen(self):
         self.lvalue.codegen()
-        self.cvalue = self.symbol_table.lookup(self.lvalue.id_).cvalue
+        self.cvalue = self.symbol_table.lookup(self.lvalue.id_, self.lineno).cvalue
 
 
 class LValue(Expr):
@@ -1613,22 +1621,22 @@ class NameLValue(LValue):
 
     @AST.sem_decorator
     def sem(self):
-        result = self.symbol_table.lookup(self.id_)
+        result = self.symbol_table.lookup(self.id_, self.lineno)
         self.stype = result.stype
         if self.load and result.num_queries <= 1:
             msg = 'Uniitialized lvalue: {}'.format(self.id_)
             self.raise_warning_helper(msg)
 
     def codegen(self):
-        self.ptr = self.symbol_table.lookup(self.id_).cvalue
+        self.ptr = self.symbol_table.lookup(self.id_, self.lineno).cvalue
         # OPTIMIZE remove redundant loads
         if self.load:
-            self.cvalue = self.builder.load(self.ptr)
+            self.cvalue = self.builder.load(self.ptr, self.lineno)
 
     def set_nil(self):
         # Result is a pointer to our type e.g. for integer variable i32 it is
         # *i32
-        result = self.symbol_table.lookup(self.id_).cvalue
+        result = self.symbol_table.lookup(self.id_, self.lineno).cvalue
 
         # Convert 0 to the pointee of the pointer (the actual type)
         nil = self.builder.inttoptr(
@@ -1656,11 +1664,11 @@ class Result(NameLValue):
 
     @AST.sem_decorator
     def sem(self):
-        result = self.symbol_table.lookup('result')
+        result = self.symbol_table.lookup('result', self.lineno)
         self.stype = result.stype
 
     def codegen(self):
-        self.ptr = self.symbol_table.lookup('result').cvalue
+        self.ptr = self.symbol_table.lookup('result', self.lineno).cvalue
 
         if self.load:
             self.cvalue = self.builder.load(self.ptr)
@@ -1766,7 +1774,7 @@ class SetExpression(LValue):
             return
         else:
             msg = 'Invalid set expression {} := {}'.format(
-                self.lvalue.stype, self.expr.stype)
+                str_type(self.lvalue.stype), str_type(self.expr.stype))
             self.raise_exception_helper(msg, PCLSemError)
 
     def codegen(self):
