@@ -1737,6 +1737,7 @@ class SetExpression(LValue):
         self.expr.sem()
         self.lvalue.sem()
 
+        # import pdb; pdb.set_trace()
         if self.expr.stype == self.lvalue.stype and is_composite(
                 self.expr.stype):
             return
@@ -1787,6 +1788,12 @@ class LBrack(LValue):
         self.expr.sem()
         self.expr.type_check((ComposerType.T_NO_COMP, BaseType.T_INT))
         self.lvalue.sem()
+
+        if not isinstance(self.lvalue.stype[0], tuple):
+            msg = 'Missing composer error {}[{}]'.format(
+                self.lvalue.stype, self.expr.stype)
+            self.raise_exception_helper(msg, PCLSemError)
+
         self.stype = self.lvalue.stype[1]
 
     def codegen(self):
