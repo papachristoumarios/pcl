@@ -19,6 +19,8 @@ ABOUT_MSG = '''
     Docs 📖 : https://github.com/papachristoumarios/pcl/wiki
 '''.format(__version__)
 
+def hook(exctype, value, tb):
+    sys.stderr.write('{}: {}\n'.format(exctype.__name__, value))
 
 def get_argparser():
     argparser = argparse.ArgumentParser(usage=ABOUT_MSG)
@@ -102,8 +104,8 @@ if __name__ == '__main__':
     args = argparser.parse_args()
 
     if not args.enable_traceback:
-        sys.tracebacklimit = 0
-
+        # sys.tracebacklimit = 0
+        sys.excepthook = hook
     if not args.W:
         warnings.simplefilter("ignore")
 

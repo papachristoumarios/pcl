@@ -19,7 +19,12 @@ chr* writeInteger(integer n) {
 }
 
 chr* writeBoolean(boolean b) {
-  printf("%d", b);
+  if (b == 0) {
+    printf("false");
+  }
+  else {
+    printf("true");
+  }
   return NULL;
 }
 
