@@ -86,3 +86,7 @@ real arctan(real x) {
 real pi() {
   return (real)M_PI;
 }
+
+chr chr(integer x) {
+    return (chr)x;
+}

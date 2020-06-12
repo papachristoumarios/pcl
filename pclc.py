@@ -2,7 +2,7 @@ import argparse
 import sys
 import os
 import warnings
-from pcl import PCLCError, PCLError, exception_handler
+from pcl import PCLCError, PCLError
 from pcl import PCLLexer
 from pcl import PCLParser
 from pcl import PCLCodegen

@@ -1789,7 +1789,7 @@ class LBrack(LValue):
         self.expr.type_check((ComposerType.T_NO_COMP, BaseType.T_INT))
         self.lvalue.sem()
 
-        if not isinstance(self.lvalue.stype[0], tuple):
+        if not isinstance(self.lvalue.stype[1], tuple):
             msg = 'Missing composer error {}[{}]'.format(
                 self.lvalue.stype, self.expr.stype)
             self.raise_exception_helper(msg, PCLSemError)
