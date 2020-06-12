@@ -255,6 +255,7 @@ class SymbolTable:
         self.formals = deque([])
         self.scope_names_indices = deque([])
         self.autos = defaultdict(int)
+        self.auto_headers = defaultdict(int)
 
         # scope for builtins
         self.open_scope()
@@ -356,3 +357,7 @@ class SymbolTable:
     def auto(self, name):
         self.autos[name] += 1
         return self.autos[name]
+
+    def auto_header(self, name):
+        self.auto_headers[name] += 1
+        return self.auto_headers[name]
