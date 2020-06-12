@@ -22,6 +22,7 @@ ABOUT_MSG = '''
 
 def hook(exctype, value, tb):
     sys.stderr.write('{}: {}\n'.format(exctype.__name__, value))
+    sys.exit(1)
 
 def get_argparser():
     argparser = argparse.ArgumentParser(usage=ABOUT_MSG)
