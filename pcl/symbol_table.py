@@ -221,12 +221,12 @@ class Scope:
         self.globals = {}
         self.name = name
 
-    def lookup(self, c, lineno=-1):
+    def lookup(self, c):
         return self.locals_.get(c, None)
 
-    def insert(self, c, st, lineno=-1):
-        if self.lookup(c, lineno=lineno):
-            msg = 'Duplicate name {} {}'.format(c, 'at line {}'.format(lineno) if lineno > 0 else '')
+    def insert(self, c, st):
+        if self.lookup(c):
+            msg = 'Duplicate name {} at line {}'.format(c,-1)
             raise PCLSymbolTableError(msg)
         else:
             self.locals_[c] = st
@@ -237,12 +237,12 @@ class FormalScope:
         self.locals_ = defaultdict(OrderedDict)
         self.name = name
 
-    def lookup(self, h, c, lineno=-1):
+    def lookup(self, h, c):
         return self.locals_[h].get(c, None)
 
-    def insert(self, h, c, st, lineno=-1):
-        if self.lookup(h, c, lineno=lineno):
-            msg = 'Duplicate name {} {}'.format(c, 'at line {}'.format(lineno) if lineno > 0 else '')
+    def insert(self, h, c, st):
+        if self.lookup(h, c):
+            msg = 'Duplicate name {} at line {}'.format(c, -1)
             raise PCLSymbolTableError(msg)
         else:
             self.locals_[h][c] = st
@@ -306,13 +306,13 @@ class SymbolTable:
             raise PCLSymbolTableError('Scopes do not exist')
 
         if last_scope:
-            entry = self.scopes[-1].lookup(c, lineno=lineno)
+            entry = self.scopes[-1].lookup(c)
             if entry:
                 entry.num_queries += 1
                 return entry
         else:
             for scope in reversed(self.scopes):
-                entry = scope.lookup(c, lineno=lineno)
+                entry = scope.lookup(c)
                 if entry:
                     entry.num_queries += 1
                     return entry
@@ -324,24 +324,31 @@ class SymbolTable:
         if len(self.scopes) == 0:
             raise PCLSymbolTableError('Scopes do not exist')
 
-        self.scopes[-1].insert(c, t, lineno=lineno)
+        try:
+            self.scopes[-1].insert(c, t)
+        except PCLSymbolTableError as e:
+            raise PCLSymbolTableError('{} at line {}'.format(str(e), lineno))
 
     def insert_formal(self, header, formal, t, lineno=-1):
         if len(self.formals) == 0:
             raise PCLSymbolTableError('Formals lists do not exist')
-        self.formals[-1].insert(header, formal, t, lineno=lineno)
+
+        try:
+            self.formals[-1].insert(header, formal, t)
+        except PCLSymbolTableError as e:
+            raise PCLSymbolTableError('{} at line {}'.format(str(e), lineno))
 
     def lookup_formal(self, header, formal, lineno=-1, last_scope=False):
         if len(self.formals) == 0:
             raise PCLSymbolTableError('Formal scopes do not exist')
 
         if last_scope:
-            entry = self.formals[-1].lookup(header, formal, lineno=lineno)
+            entry = self.formals[-1].lookup(header, formal)
             if entry:
                 return entry
         else:
             for formal in reversed(self.formals):
-                entry = formal.lookup(header, formal, lineno=lineno)
+                entry = formal.lookup(header, formal)
                 if entry:
                     return entry
 
