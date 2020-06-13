@@ -915,7 +915,7 @@ class Call(Statement):
                 2. Call by value passes expression codegen value
         '''
         real_params = []
-
+        counter = 0
         try:
             call_entry_cvalue = self.symbol_table.lookup(self.id_, lineno=self.lineno).cvalue
         except PCLSymbolTableError:
@@ -931,6 +931,9 @@ class Call(Statement):
                 self.exprs, call_entry_cvalue.args, formals):
             expr.codegen()
             if formal.by_reference:
+                if not hasattr(expr, 'ptr'):
+                    msg = 'Expression at position {} cannot be passed by reference'.format(counter)
+                    self.raise_exception_helper(msg, PCLCodegenError)
                 if expr.ptr:
                     ptr = expr.ptr
                     if ptr.type != formal_type.type:
@@ -946,6 +949,7 @@ class Call(Statement):
                 else:
                     real_params.append(expr.cvalue)
 
+            counter += 1
         self.cvalue = self.builder.call(call_entry_cvalue, real_params)
 
 
