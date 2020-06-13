@@ -342,10 +342,11 @@ class LocalHeader(Local):
                 'forward_' + self.header.id_, self.lineno)
             header_cvalue = header_entry.cvalue
         except PCLSymbolTableError:
+            header_counter = self.symbol_table.auto_header(self.header.id_)
             header_cvalue = ir.Function(
                 self.module,
                 header_type_cvalue,
-                name=self.header.id_)
+                name=self.header.id_ + '_' + str(header_counter))
 
             if self.header.func_type:
                 header_entry = SymbolEntry(
@@ -583,10 +584,11 @@ class Forward(Local):
         header_type_cvalue = ir.FunctionType(
             header_return_cvalue, formal_types_cvalues, var_arg=False)
 
+        header_counter = self.symbol_table.auto_header(self.header.id_)
         header_cvalue = ir.Function(
             self.module,
             header_type_cvalue,
-            name=self.header.id_)
+            name=self.header.id_ + '_' + str(header_counter))
 
         header_cvalue.is_declaration = True
 

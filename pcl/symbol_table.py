@@ -351,13 +351,15 @@ class SymbolTable:
     def formal_generator(self, header_name):
         for formals_entry in reversed(self.formals):
             if header_name in formals_entry.locals_:
-                for elem in formals_entry.locals_[header_name].items():
-                    yield elem
+                return list(formals_entry.locals_[header_name].items())
+
+        return []
 
     def auto(self, name):
         self.autos[name] += 1
         return self.autos[name]
 
-    def auto_header(self, name):
-        self.auto_headers[name] += 1
+    def auto_header(self, name, inc=True):
+        if inc:
+            self.auto_headers[name] += 1
         return self.auto_headers[name]
