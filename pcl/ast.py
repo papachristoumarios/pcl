@@ -1067,7 +1067,7 @@ class Goto(Statement):
         '''
             Asserts that label is declared.
         '''
-        label = self.symbol_table.lookup(self.id_, self.lineno, lineno=self.lineno, last_scope=True)
+        label = self.symbol_table.lookup(self.id_, lineno=self.lineno, last_scope=True)
         if label.num_queries <= 1:
             self.raise_exception_helper('Undeclared Label: {}'.format(self.id_), PCLSemError)
 
@@ -1647,6 +1647,7 @@ class NameLValue(LValue):
     def sem(self):
         result = self.symbol_table.lookup(self.id_, lineno=self.lineno)
         self.stype = result.stype
+        self.changeable = result.name_type not in [NameType.N_FUNCTION, NameType.N_PROCEDURE]
         if self.load and result.num_queries <= 1:
             msg = 'Uniitialized lvalue: {}'.format(self.id_)
             self.raise_warning_helper(msg)
@@ -1784,7 +1785,13 @@ class SetExpression(LValue):
         self.expr.sem()
         self.lvalue.sem()
 
-        # import pdb; pdb.set_trace()
+        if isinstance(self.lvalue, NameLValue) and hasattr(self.lvalue, 'changeable'):
+            if not self.lvalue.changeable:
+                msg = 'L-value {} cannot be set'.format(
+                    self.lvalue.id_)
+                self.raise_exception_helper(msg, PCLSemError)
+
+
         if self.expr.stype == self.lvalue.stype and is_composite(
                 self.expr.stype):
             return
