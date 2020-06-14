@@ -915,6 +915,7 @@ class Call(Statement):
                 2. Call by value passes expression codegen value
         '''
         real_params = []
+        phantoms = []
         counter = 0
         try:
             call_entry_cvalue = self.symbol_table.lookup(self.id_, lineno=self.lineno).cvalue
@@ -927,7 +928,7 @@ class Call(Statement):
             self.raise_exception_helper(msg, PCLSemError)
 
         formals = self.symbol_table.formal_generator(self.id_)
-        for expr, formal_type, (_, formal) in zip(
+        for expr, formal_type, (formal_name, formal) in zip(
                 self.exprs, call_entry_cvalue.args, formals):
             expr.codegen()
             if formal.by_reference:
@@ -943,6 +944,15 @@ class Call(Statement):
                 else:
                     raise NotImplementedError()
             else:
+                try:
+                    var_cvalue = self.symbol_table.lookup(formal_name).cvalue
+                    phantom_ptr = self.builder.alloca(var_cvalue.type.pointee)
+                    val = self.builder.load(var_cvalue)
+                    self.builder.store(val, phantom_ptr)
+                    phantoms.append((counter, phantom_ptr))
+                except:
+                    pass
+                # import pdb; pdb.set_trace()
                 if isinstance(expr, StringLiteral):
                     ptr = expr.ptr
                     real_params.append(ptr)
@@ -951,6 +961,11 @@ class Call(Statement):
 
             counter += 1
         self.cvalue = self.builder.call(call_entry_cvalue, real_params)
+
+        for pos, phantom_ptr in phantoms:
+            var_cvalue = self.symbol_table.lookup(formals[pos][0]).cvalue
+            temp = self.builder.load(phantom_ptr)
+            self.builder.store(temp, var_cvalue)
 
 
 class If(Statement):
@@ -1501,7 +1516,9 @@ class CompOp(RValue):
             arithmetic = (
                 self.lhs.stype in arithmetic_types) and (
                 self.rhs.stype in arithmetic_types)
-            if not arithmetic:
+            if self.lhs.stype[0] == ComposerType.T_PTR and self.rhs.stype[1] == BaseType.T_NIL or self.rhs.stype[0] == ComposerType.T_PTR and self.lhs.stype[1] == BaseType.T_NIL:
+                pass
+            elif not arithmetic:
                 assert self.lhs.stype == self.rhs.stype, 'Comparison is only allowed between operands of same type'
                 assert self.lhs.stype[0] != ComposerType.T_CONST_ARRAY and self.lhs.stype[
                     0] != ComposerType.T_VAR_ARRAY, 'Arrays cannot be compared.'
