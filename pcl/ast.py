@@ -1385,6 +1385,13 @@ class ArUnOp(RValue):
     @AST.sem_decorator
     def sem(self):
         self.rhs.sem()
+
+        if isinstance(self.rhs, NameLValue) and hasattr(self.rhs, 'changeable'):
+            if not self.rhs.changeable:
+                msg = 'RHS L-valuee {} cannot be operated'.format(
+                    self.rhs.id_)
+                self.raise_exception_helper(msg, PCLSemError)
+
         self.rhs.type_check(arithmetic_types)
         self.stype = self.rhs.stype
 
@@ -1437,6 +1444,19 @@ class ArOp(RValue):
     def sem(self):
         self.lhs.sem()
         self.rhs.sem()
+
+        if isinstance(self.lhs, NameLValue) and hasattr(self.lhs, 'changeable'):
+            if not self.lhs.changeable:
+                msg = 'LHS L-valuee {} cannot be operated'.format(
+                    self.lhs.id_)
+                self.raise_exception_helper(msg, PCLSemError)
+
+
+        if isinstance(self.rhs, NameLValue) and hasattr(self.rhs, 'changeable'):
+            if not self.rhs.changeable:
+                msg = 'RHS L-valuee {} cannot be operated'.format(
+                    self.rhs.id_)
+                self.raise_exception_helper(msg, PCLSemError)
 
         self.lhs.type_check(arithmetic_types)
         self.rhs.type_check(arithmetic_types)
