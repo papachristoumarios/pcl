@@ -1,0 +1,7 @@
+program trunc_real;
+
+
+begin
+  writeInteger(trunc(3.511));
+  writeInteger(round(4.44));
+end.
