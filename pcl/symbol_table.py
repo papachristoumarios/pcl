@@ -270,7 +270,8 @@ class SymbolTable:
             builtin_fn = ir.Function(
                 self.module,
                 builtin_signature_type,
-                name=builtin_name)
+                name='{}{}'.format(builtin_name, '2' if builtin_name in ['trunc', 'round'] else ''))
+
             builtin_entry.cvalue = builtin_fn
             self.insert(builtin_name, builtin_entry)
 
