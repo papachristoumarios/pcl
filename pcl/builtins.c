@@ -10,15 +10,15 @@
 typedef int32_t integer;
 typedef double real;
 typedef int8_t boolean;
-typedef int8_t chr;
+typedef int8_t character;
 
 // write
-chr* writeInteger(integer n) {
+character* writeInteger(integer n) {
   printf("%d", n);
   return NULL;
 }
 
-chr* writeBoolean(boolean b) {
+character* writeBoolean(boolean b) {
   if (b == 0) {
     printf("false");
   }
@@ -28,17 +28,17 @@ chr* writeBoolean(boolean b) {
   return NULL;
 }
 
-chr* writeChar(chr c) {
+character* writeChar(character c) {
   printf("%c", c);
   return NULL;
 }
 
-chr* writeReal(real x) {
+character* writeReal(real x) {
   printf("%f", x);
   return NULL;
 }
 
-chr* writeString(chr *s) {
+character* writeString(character *s) {
   printf("%s", s);
   return NULL;
 }
@@ -57,8 +57,8 @@ boolean readBoolean() {
   return (boolean)n;
 }
 
-chr readChar() {
-  chr n;
+character readChar() {
+  character n;
   n = getchar();
   return n;
 }
@@ -69,13 +69,13 @@ real readReal() {
   return (double)n;
 }
 
-chr* readString(integer size, chr *s) {
+character* readString(integer size, character *s) {
     if (size <= 0) {
       return NULL;
     }
 
     // Create safeguard buffer
-    chr buf[size];
+    character buf[size];
 
     // Sets the sequence to 0
     memset(buf, 0, size);
@@ -89,7 +89,7 @@ chr* readString(integer size, chr *s) {
     // Counter
     integer i = 0;
 
-    chr c = getchar();
+    character c = getchar();
 
     // Read the string until EOF or newline
 
@@ -111,9 +111,25 @@ real ln(real x) {
 
 // arctan
 real arctan(real x) {
-  return (real)atan(x);
+  return (real) atan(x);
 }
 
 real pi() {
-  return (real)M_PI;
+  return (real) M_PI;
+}
+
+integer trunc2(real x) {
+  return (integer) trunc(x);
+}
+
+integer round2(real x){
+  return (integer) round(x);
+}
+
+character chr(integer x){
+  return (character) x;
+}
+
+integer ord(character x){
+  return (integer) x;
 }
