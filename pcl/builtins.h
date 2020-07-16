@@ -10,7 +10,7 @@ extern integer readInteger();
 extern boolean readBoolean();
 extern character readChar();
 extern real readReal();
-extern character* readString(integer, character*)
+extern character* readString(integer, character*);
 extern integer trunc2(real);
 extern integer round2(real);
 extern character chr(integer);
